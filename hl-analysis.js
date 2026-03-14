@@ -5,19 +5,19 @@
  */
 
 const VOLS = [
-  { sym: '1HZ10V',  name: 'Vol 10 (1s)',  B: 0.356,   dp: 3 },
-  { sym: '1HZ15V',  name: 'Vol 15 (1s)',  B: 0.7121,  dp: 4 },
-  { sym: '1HZ25V',  name: 'Vol 25 (1s)',  B: 78.311,  dp: 3 },
-  { sym: '1HZ30V',  name: 'Vol 30 (1s)',  B: 0.7571,  dp: 4 },
-  { sym: '1HZ50V',  name: 'Vol 50 (1s)',  B: 48.220,  dp: 3 },
-  { sym: '1HZ75V',  name: 'Vol 75 (1s)',  B: 1.096,   dp: 3 },
-  { sym: '1HZ90V',  name: 'Vol 90 (1s)',  B: 3.2240,  dp: 4 },
-  { sym: '1HZ100V', name: 'Vol 100 (1s)', B: 0.576,   dp: 3 },
-  { sym: 'R_10',    name: 'Vol 10',       B: 0.2704,  dp: 4 },
-  { sym: 'R_25',    name: 'Vol 25',       B: 0.3812,  dp: 4 },
-  { sym: 'R_50',    name: 'Vol 50',       B: 0.03013, dp: 5 },
-  { sym: 'R_75',    name: 'Vol 75',       B: 14.681,  dp: 3 },
-  { sym: 'R_100',   name: 'Vol 100',      B: 0.448,   dp: 3 },
+  { sym: '1HZ10V',  name: 'Volatility 10 (1s)',  B: 0.356,   dp: 3 },
+  { sym: '1HZ15V',  name: 'Volatility 15 (1s)',  B: 0.7121,  dp: 4 },
+  { sym: '1HZ25V',  name: 'Volatility 25 (1s)',  B: 78.311,  dp: 3 },
+  { sym: '1HZ30V',  name: 'Volatility 30 (1s)',  B: 0.7571,  dp: 4 },
+  { sym: '1HZ50V',  name: 'Volatility 50 (1s)',  B: 48.220,  dp: 3 },
+  { sym: '1HZ75V',  name: 'Volatility 75 (1s)',  B: 1.096,   dp: 3 },
+  { sym: '1HZ90V',  name: 'Volatility 90 (1s)',  B: 3.2240,  dp: 4 },
+  { sym: '1HZ100V', name: 'Volatility 100 (1s)', B: 0.576,   dp: 3 },
+  { sym: 'R_10',    name: 'Volatility 10',       B: 0.2704,  dp: 4 },
+  { sym: 'R_25',    name: 'Volatility 25',       B: 0.3812,  dp: 4 },
+  { sym: 'R_50',    name: 'Volatility 50',       B: 0.03013, dp: 5 },
+  { sym: 'R_75',    name: 'Volatility 75',       B: 14.681,  dp: 3 },
+  { sym: 'R_100',   name: 'Volatility 100',      B: 0.448,   dp: 3 },
 ];
 
 let generatorInitialized = false;
