@@ -1,0 +1,109 @@
+/* =============================================
+   menu-tab.css — Home / Menu tab styles
+   ============================================= */
+.menu-tab-wrapper { max-width: 860px; margin: 0 auto; }
+
+/* ── Hero section ── */
+.menu-hero { text-align: center; padding: 2.5rem 1rem 2rem; margin-bottom: 2rem; }
+
+.menu-hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--accent-glow); border: 1px solid var(--accent);
+  color: var(--accent-text); padding: 5px 16px; border-radius: 20px;
+  font-family: var(--font-mono); font-size: 0.72rem; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 1.2rem;
+}
+
+.menu-hero h1 { font-size: 2.8rem; margin-bottom: 0.75rem; line-height: 1.1; }
+
+.menu-hero p { color: var(--text-secondary); font-size: 1.05rem; max-width: 520px; margin: 0 auto; }
+
+/* ── Action cards ── */
+.menu-actions-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.2rem; margin-bottom: 2.5rem; }
+
+.menu-action-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px;
+  padding: 1.8rem 1.5rem; display: flex; flex-direction: column; align-items: flex-start;
+  gap: 0.75rem; text-decoration: none; transition: all 0.22s ease;
+  cursor: pointer; position: relative; overflow: hidden;
+}
+
+.menu-action-card::before {
+  content: ''; position: absolute; inset: 0; opacity: 0;
+  transition: opacity 0.22s ease; border-radius: 20px;
+}
+
+.menu-action-card.card-blue::before   { background: radial-gradient(circle at top left, rgba(59,130,246,0.12), transparent 60%); }
+.menu-action-card.card-green::before  { background: radial-gradient(circle at top left, rgba(16,185,129,0.12), transparent 60%); }
+.menu-action-card.card-orange::before { background: radial-gradient(circle at top left, rgba(249,115,22,0.12), transparent 60%); }
+.menu-action-card.card-purple::before { background: radial-gradient(circle at top left, rgba(139,92,246,0.12), transparent 60%); }
+
+.menu-action-card:hover::before { opacity: 1; }
+.menu-action-card.card-blue:hover   { border-color: #3b82f6; box-shadow: 0 8px 28px rgba(59,130,246,0.18); }
+.menu-action-card.card-green:hover  { border-color: #10b981; box-shadow: 0 8px 28px rgba(16,185,129,0.18); }
+.menu-action-card.card-orange:hover { border-color: #f97316; box-shadow: 0 8px 28px rgba(249,115,22,0.18); }
+.menu-action-card.card-purple:hover { border-color: #8b5cf6; box-shadow: 0 8px 28px rgba(139,92,246,0.18); }
+
+.menu-card-icon  { font-size: 2.4rem; line-height: 1; }
+.menu-card-label {
+  font-family: var(--font-mono); font-size: 0.65rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 2px;
+  padding: 3px 9px; border-radius: 6px; margin-bottom: 0.1rem;
+}
+.label-blue   { background: rgba(59,130,246,0.12);  color: #60a5fa; }
+.label-green  { background: rgba(16,185,129,0.12);  color: #34d399; }
+.label-orange { background: rgba(249,115,22,0.12);  color: #fb923c; }
+.label-purple { background: rgba(139,92,246,0.12);  color: #a78bfa; }
+
+.menu-card-title { font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; }
+.menu-card-desc  { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; }
+
+.menu-card-arrow {
+  margin-top: auto; font-size: 0.8rem; font-family: var(--font-mono);
+  display: flex; align-items: center; gap: 6px; transition: gap 0.2s;
+}
+.menu-card-arrow.arr-blue   { color: #60a5fa; }
+.menu-card-arrow.arr-green  { color: #34d399; }
+.menu-card-arrow.arr-orange { color: #fb923c; }
+.menu-card-arrow.arr-purple { color: #a78bfa; }
+.menu-action-card:hover .menu-card-arrow { gap: 10px; }
+
+/* ── Info cards ── */
+.menu-info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2.5rem; }
+
+.menu-info-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+  padding: 1.2rem; text-align: center; transition: all 0.2s;
+}
+.menu-info-card:hover { border-color: var(--border-hover); }
+
+.menu-info-icon  { font-size: 1.8rem; margin-bottom: 0.6rem; }
+.menu-info-title { font-family: var(--font-display); font-weight: 700; font-size: 0.92rem; color: var(--text-primary); margin-bottom: 0.35rem; }
+.menu-info-text  { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; }
+
+/* ── Tips section ── */
+.menu-tips-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 1.8rem; margin-bottom: 2rem; }
+
+.menu-tips-title {
+  font-family: var(--font-display); font-size: 1.15rem; font-weight: 700;
+  color: var(--text-primary); margin-bottom: 1.2rem;
+  display: flex; align-items: center; gap: 10px;
+}
+
+.tips-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.9rem; }
+
+.tip-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 0.9rem; background: var(--bg-elevated);
+  border-radius: 12px; border: 1px solid var(--border);
+}
+.tip-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+.tip-text { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; }
+.tip-text strong { color: var(--text-primary); font-weight: 600; display: block; margin-bottom: 2px; }
+
+/* ── Footer note ── */
+.menu-footer-note {
+  text-align: center; padding: 1.5rem;
+  background: var(--bg-elevated); border-radius: 16px; border: 1px solid var(--border);
+  font-size: 0.82rem; color: var(--text-muted); font-family: var(--font-mono);
+}

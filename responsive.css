@@ -1,0 +1,42 @@
+/* =============================================
+   responsive.css — Media query breakpoints
+   ============================================= */
+
+@media (max-width: 1100px) {
+  .acc-main-grid   { grid-template-columns: 1fr; }
+  .acc-stats-grid  { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 0.75rem;
+    height: auto;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .navbar-left     { flex-wrap: wrap; }
+  .menu            { gap: 1px; }
+  .menu li a       { padding: 0.3rem 0.5rem; font-size: 0.75rem; }
+  .navbar-brand    { font-size: 1.1rem; }
+
+  .main-content-hl { grid-template-columns: 1fr; }
+
+  .menu-actions-grid { grid-template-columns: 1fr; }
+  .menu-info-grid    { grid-template-columns: 1fr 1fr; }
+  .tips-grid         { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .acc-stats-grid   { grid-template-columns: 1fr 1fr; }
+  .acc-header       { flex-direction: column; align-items: flex-start; }
+  .acc-symbols-grid { grid-template-columns: repeat(3, 1fr); }
+  #accum-inner      { padding: 10px; }
+  .tab-content      { padding: 1rem 0.75rem; }
+  .menu-info-grid   { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 400px) {
+  .acc-symbols-grid { grid-template-columns: repeat(2, 1fr); }
+  .acc-stats-grid   { grid-template-columns: 1fr 1fr; }
+}

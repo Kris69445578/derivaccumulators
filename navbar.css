@@ -1,0 +1,126 @@
+/* =============================================
+   navbar.css — Top navigation bar
+   ============================================= */
+.navbar {
+  background: var(--nav-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--nav-border);
+  padding: 0 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 54px;
+  box-shadow: 0 1px 20px rgba(0,0,0,0.15);
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.navbar-brand {
+  font-family: var(--font-brand);
+  font-size: 1.35rem;
+  letter-spacing: 2px;
+  color: var(--accent);
+  white-space: nowrap;
+  margin-right: 0.75rem;
+  padding-right: 0.75rem;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ── Nav menu ── */
+.menu {
+  list-style: none;
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.menu li a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.82rem;
+  padding: 0.38rem 0.75rem;
+  border-radius: 8px;
+  transition: all 0.18s ease;
+  cursor: pointer;
+  letter-spacing: 0.2px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  position: relative;
+}
+
+.menu li a:hover   { color: var(--text-primary); background: var(--bg-elevated); }
+.menu li a.active  { color: var(--accent); background: var(--accent-glow); font-weight: 600; }
+
+.menu li a .nav-icon { font-size: 0.95rem; line-height: 1; }
+
+/* ── Theme switcher ── */
+.theme-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.theme-switcher:hover { border-color: var(--border-hover); }
+
+.theme-track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  transition: background 0.3s;
+}
+
+[data-theme="light"] .theme-track { background: var(--accent); }
+
+.theme-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: var(--text-secondary);
+  border-radius: 50%;
+  transition: transform 0.25s ease, background 0.3s;
+}
+
+[data-theme="light"] .theme-thumb {
+  transform: translateX(16px);
+  background: #fff;
+}
+
+.theme-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+
+.theme-icon { font-size: 0.9rem; }

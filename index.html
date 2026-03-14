@@ -1,0 +1,105 @@
+
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+  <title>💵 JAHIM TRADER • HL Suite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600;700&family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="variables.css">
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="navbar.css">
+  <link rel="stylesheet" href="components.css">
+  <link rel="stylesheet" href="hl-analysis.css">
+  <link rel="stylesheet" href="accumulator.css">
+  <link rel="stylesheet" href="live-panel.css">
+  <link rel="stylesheet" href="modal.css">
+  <link rel="stylesheet" href="menu-tab.css">
+  <link rel="stylesheet" href="responsive.css">
+</head>
+<body class="no-select">
+
+  <div id="acc-toast-container"></div>
+
+  <!-- API TOKEN MODAL -->
+  <div id="acc-token-overlay">
+    <div id="acc-token-modal">
+      <div class="modal-hex-icon">⬡</div>
+      <div class="modal-title">Connect your Deriv Account</div>
+      <div class="modal-sub">Enter your API token to activate the Accumulator Bot and start trading.</div>
+      <div class="modal-input-wrap">
+        <label>Deriv API Token</label>
+        <input type="password" id="modal-token-input" class="modal-token-input" placeholder="Paste your API token here…" autocomplete="off"/>
+        <button class="modal-eye-btn" id="modal-eye-btn" onclick="toggleModalEye()" title="Show/hide token">👁</button>
+      </div>
+      <div class="modal-error" id="modal-error"></div>
+      <button class="modal-connect-btn" onclick="modalDoConnect()">🔗 Connect &amp; Open Bot</button>
+      <button class="modal-skip-btn" onclick="closeAccModal()">Skip — Open Without Connecting</button>
+      <div class="modal-link-row">
+        Don't have a token? <a href="https://legacy-api.deriv.com/dashboard/" target="_blank" rel="noopener">Get your API token →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING LIVE POSITION PANEL -->
+  <div id="hl-live-panel">
+    <div class="hl-panel-header">
+      <span class="hl-panel-title">
+        <span class="hl-panel-live-dot"></span>
+        Live Position
+      </span>
+      <button class="hl-panel-close" onclick="hlPanelClose()" title="Close">✕</button>
+    </div>
+    <div class="hl-panel-body" id="hl-panel-body">
+      <div class="hl-panel-empty">No open trades yet.<br>Click 🚀 TRADE to open one.</div>
+    </div>
+    <button class="hl-panel-minimize" onclick="hlPanelMinimize()">▼ minimise</button>
+  </div>
+
+  <!-- MINIMISED PILL -->
+  <button id="hl-live-pill" onclick="hlPanelRestore()">
+    <span class="hl-pill-dot"></span>
+    <span id="hl-pill-label">LIVE POSITION</span>
+  </button>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <span class="navbar-brand">JAHIM</span>
+      <ul class="menu">
+        <li><a onclick="showTab('menu-tab')"><span class="nav-icon">🏠</span> Menu</a></li>
+        <li><a onclick="showTab('generator')"><span class="nav-icon">⚡</span> HL Analysis</a></li>
+        <li><a onclick="showTab('accum-bot')"><span class="nav-icon">🔄</span> Accumulator</a></li>
+        <li><a onclick="showTab('bot-trading')"><span class="nav-icon">🤖</span> Higher/Lower</a></li>
+        <li><a onclick="showTab('digits-analyzer')"><span class="nav-icon">🔢</span> Digits</a></li>
+        <li><a onclick="showTab('balance-checker')"><span class="nav-icon">💰</span> Balance</a></li>
+      </ul>
+    </div>
+    <div class="theme-switcher" onclick="toggleTheme()" title="Toggle theme">
+      <span class="theme-icon" id="theme-icon-left">🌙</span>
+      <div class="theme-track"><div class="theme-thumb"></div></div>
+      <span class="theme-icon" id="theme-icon-right">☀️</span>
+      <span class="theme-label" id="theme-label">LIGHT</span>
+    </div>
+  </nav>
+
+  <div id="tab-shell"></div>
+
+  <!-- Scripts -->
+  <script src="survival.js"></script>
+  <script src="accumulator-engine.js"></script>
+  <script src="accumulator-bot.js"></script>
+  <script src="menu.js"></script>
+  <script src="hl-analysis.js"></script>
+  <script src="digits.js"></script>
+  <script src="balance.js"></script>
+  <script src="bot-trading.js"></script>
+  <script src="live-panel.js"></script>
+  <script src="modal.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

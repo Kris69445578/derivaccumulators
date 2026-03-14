@@ -1,0 +1,306 @@
+/* =============================================
+   accumulator.css — Accumulator Bot UI styles
+   ============================================= */
+
+/* ── Wrapper ── */
+#accum-bot-wrapper {
+  background: var(--bg-surface);
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  min-height: calc(100vh - 140px);
+  font-family: var(--font-body);
+  position: relative;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+#accum-bot-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.18;
+  pointer-events: none;
+  border-radius: 24px;
+}
+
+#accum-inner { position: relative; z-index: 1; padding: 18px; }
+
+/* ── Header ── */
+.acc-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 14px; border-bottom: 1px solid var(--border);
+  margin-bottom: 14px; flex-wrap: wrap; gap: 10px;
+}
+
+.acc-logo { display: flex; align-items: center; gap: 12px; }
+
+.acc-logo-icon {
+  width: 40px; height: 40px;
+  background: var(--accent);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  animation: pulse-hex 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse-hex {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  50%       { box-shadow: 0 0 18px 6px var(--accent-glow); }
+}
+
+.acc-logo-text h2 {
+  font-size: 16px; font-weight: 700; letter-spacing: -0.3px;
+  color: var(--text-primary); background: none; -webkit-text-fill-color: unset;
+  font-family: var(--font-display);
+}
+
+.acc-logo-text p {
+  font-size: 10px; color: var(--text-muted); font-family: var(--font-mono);
+  text-transform: uppercase; letter-spacing: 2px; margin-top: 1px;
+}
+
+.acc-header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ── Status badge ── */
+.acc-status-badge {
+  display: flex; align-items: center; gap: 7px; padding: 6px 12px;
+  border: 1px solid var(--border); border-radius: 8px;
+  font-family: var(--font-mono); font-size: 10px;
+  background: var(--bg-card); color: var(--text-secondary);
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.acc-status-dot         { width: 7px; height: 7px; border-radius: 50%; background: #34d399; animation: blink 1.5s ease-in-out infinite; }
+.acc-status-dot.offline { background: #f87171; animation: none; }
+.acc-status-dot.paused  { background: #fbbf24; animation: none; }
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* ── Buttons ── */
+.acc-btn {
+  padding: 8px 14px; border-radius: 8px; font-family: var(--font-mono);
+  font-size: 11px; font-weight: 700; cursor: pointer; border: none;
+  letter-spacing: 0.8px; text-transform: uppercase; transition: all 0.15s;
+}
+
+.acc-btn-primary   { background: var(--accent); color: #fff; }
+.acc-btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+.acc-btn-danger    { background: transparent; color: #f87171; border: 1px solid #f87171; }
+.acc-btn-danger:hover  { background: #f87171; color: #fff; }
+.acc-btn-warning   { background: transparent; color: #fbbf24; border: 1px solid #fbbf24; }
+.acc-btn-warning:hover { background: #fbbf24; color: #000; }
+.acc-btn-secondary { background: transparent; color: var(--accent); border: 1px solid var(--border); }
+.acc-btn-secondary:hover { border-color: var(--accent); }
+.acc-btn:disabled  { opacity: 0.38; cursor: not-allowed; transform: none; }
+
+/* ── Stats grid ── */
+.acc-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+
+.acc-stat-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 12px; position: relative; overflow: hidden;
+  transition: background 0.3s, border-color 0.3s;
+}
+.acc-stat-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); }
+.acc-stat-card.green::after  { background: #34d399; }
+.acc-stat-card.red::after    { background: #f87171; }
+.acc-stat-card.yellow::after { background: #fbbf24; }
+
+.acc-stat-label { font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.acc-stat-value { font-size: 20px; font-weight: 800; letter-spacing: -1px; color: var(--text-primary); font-family: var(--font-display); }
+.acc-stat-value.green  { color: #34d399; }
+.acc-stat-value.red    { color: #f87171; }
+.acc-stat-value.yellow { color: #fbbf24; }
+.acc-stat-sub { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); margin-top: 2px; }
+
+/* ── Main grid layout ── */
+.acc-main-grid { display: grid; grid-template-columns: 300px 1fr; gap: 12px; }
+.acc-right-col { display: flex; flex-direction: column; gap: 12px; }
+
+/* ── Panels ── */
+.acc-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; transition: background 0.3s, border-color 0.3s; }
+
+.acc-panel-header {
+  padding: 8px 14px; border-bottom: 1px solid var(--border); display: flex;
+  align-items: center; justify-content: space-between;
+  background: var(--bg-elevated); transition: background 0.3s, border-color 0.3s;
+}
+.acc-panel-title { font-size: 10px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); }
+.acc-panel-body  { padding: 12px; }
+
+/* ── Config sections ── */
+.acc-config-section        { margin-bottom: 14px; }
+.acc-config-section:last-child { margin-bottom: 0; }
+.acc-config-title {
+  font-size: 10px; font-family: var(--font-mono); text-transform: uppercase;
+  letter-spacing: 2px; color: var(--accent); margin-bottom: 8px;
+  padding-bottom: 4px; border-bottom: 1px solid var(--border);
+}
+
+.acc-field         { margin-bottom: 6px; }
+.acc-field label   { display: block; font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+.acc-field input,
+.acc-field select  { width: 100%; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary); padding: 6px 10px; border-radius: 8px; font-family: var(--font-mono); font-size: 12px; outline: none; transition: border-color 0.15s; }
+.acc-field input:focus,
+.acc-field select:focus { border-color: var(--accent); }
+.acc-field select option { background: var(--bg-card); }
+
+.acc-row { display: flex; gap: 8px; }
+.acc-row > * { flex: 1; min-width: 0; }
+
+/* ── Toggle rows ── */
+.acc-toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.acc-toggle-row:last-child { border-bottom: none; }
+.acc-toggle-label { font-size: 11px; font-family: var(--font-mono); color: var(--text-secondary); }
+
+.acc-toggle { position: relative; width: 36px; height: 18px; flex-shrink: 0; }
+.acc-toggle input { opacity: 0; width: 0; height: 0; }
+.acc-slider { position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 18px; transition: 0.2s; }
+.acc-slider::before { content: ''; position: absolute; height: 12px; width: 12px; left: 3px; bottom: 3px; background: var(--text-muted); border-radius: 50%; transition: 0.2s; }
+.acc-toggle input:checked + .acc-slider { background: var(--accent); }
+.acc-toggle input:checked + .acc-slider::before { transform: translateX(18px); background: #fff; }
+
+/* ── Symbols grid ── */
+.acc-symbols-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+
+.acc-symbol-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; cursor: pointer; transition: all 0.15s; position: relative; }
+.acc-symbol-card.active        { border-color: var(--accent); background: var(--accent-glow); }
+.acc-symbol-card:hover:not(.active) { border-color: var(--border-hover); }
+
+.acc-symbol-name  { font-family: var(--font-mono); font-size: 9px; font-weight: 700; color: var(--text-primary); }
+.acc-symbol-price { font-size: 9px; color: var(--text-muted); font-family: var(--font-mono); margin-top: 2px; }
+.acc-symbol-tick  { font-size: 9px; font-family: var(--font-mono); float: right; }
+.acc-symbol-tick.up   { color: #34d399; }
+.acc-symbol-tick.down { color: #f87171; }
+
+/* ── Trade log ── */
+.acc-trade-log { max-height: 220px; overflow-y: auto; }
+
+.acc-trade-entry {
+  display: grid;
+  grid-template-columns: 60px 70px 1fr 70px 55px;
+  gap: 4px; align-items: center; padding: 5px 12px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono); font-size: 10px;
+  animation: slideIn 0.3s ease;
+}
+.acc-trade-entry:last-child { border-bottom: none; }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; }
+}
+
+.acc-trade-time { color: var(--text-muted); }
+.acc-trade-sym  { color: var(--accent); font-size: 9px; }
+.acc-trade-result      { font-weight: 700; }
+.acc-trade-result.win  { color: #34d399; }
+.acc-trade-result.loss { color: #f87171; }
+.acc-trade-profit.pos  { color: #34d399; }
+.acc-trade-profit.neg  { color: #f87171; }
+.acc-trade-mult        { color: #fbbf24; }
+
+/* ── Martingale display ── */
+.acc-mart-mult   { font-size: 36px; font-weight: 800; font-family: var(--font-display); color: var(--accent); letter-spacing: -2px; text-align: center; padding: 6px 0; transition: all 0.3s; }
+.acc-mart-mult.danger  { color: #f87171; }
+.acc-mart-mult.warning { color: #fbbf24; }
+
+.acc-mart-stake { text-align: center; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-top: -4px; margin-bottom: 8px; }
+.acc-mart-steps { display: flex; gap: 3px; justify-content: center; flex-wrap: wrap; }
+.acc-mart-step  { width: 14px; height: 4px; border-radius: 3px; background: var(--border); transition: background 0.2s; }
+.acc-mart-step.filled        { background: var(--accent); }
+.acc-mart-step.filled.danger { background: #f87171; }
+
+/* ── P&L Chart ── */
+.acc-chart-area { position: relative; height: 120px; overflow: hidden; }
+canvas#acc-pnl-chart { width: 100%; height: 100%; }
+
+/* ── Progress bar ── */
+.acc-progress-wrap { background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; height: 8px; overflow: hidden; margin-top: 4px; }
+.acc-progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #34d399); border-radius: 6px; transition: width 0.5s ease; }
+
+/* ── Active trades ── */
+.acc-active-card {
+  background: var(--accent-glow); border: 1px solid var(--accent); border-radius: 10px;
+  padding: 10px; display: flex; align-items: center; gap: 10px;
+  animation: glow-pulse 2s ease-in-out infinite; margin-bottom: 5px;
+}
+.acc-active-card:last-child { margin-bottom: 0; }
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  50%       { box-shadow: 0 0 14px 2px var(--accent-glow); }
+}
+
+.acc-active-sym  { font-size: 13px; font-weight: 800; font-family: var(--font-display); color: var(--text-primary); }
+.acc-active-meta { flex: 1; font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+.acc-active-pnl  { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: #34d399; }
+
+/* ── Spinner ── */
+.acc-spin {
+  width: 14px; height: 14px; border: 2px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.8s linear infinite; flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Utility ── */
+.acc-no-trades { text-align: center; color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; padding: 14px; }
+
+.acc-chip { display: inline-block; padding: 2px 7px; border-radius: 5px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; }
+.acc-chip-green  { background: rgba(52,211,153,0.12); color: #34d399; }
+.acc-chip-red    { background: rgba(248,113,113,0.12); color: #f87171; }
+.acc-chip-yellow { background: rgba(251,191,36,0.12);  color: #fbbf24; }
+.acc-chip-blue   { background: var(--accent-glow); color: var(--accent); }
+
+/* ── Indicator chips ── */
+.acc-indicators-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+.acc-ind-chip { padding: 3px 7px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 9px; display: flex; align-items: center; gap: 4px; }
+.acc-ind-dot    { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.acc-dot-green  { background: #34d399; }
+.acc-dot-red    { background: #f87171; }
+.acc-dot-yellow { background: #fbbf24; }
+.acc-dot-muted  { background: var(--text-muted); }
+
+/* ── Console ── */
+.acc-console {
+  background: var(--bg-input); border-radius: 10px; padding: 8px 10px;
+  max-height: 140px; overflow-y: auto; font-family: var(--font-mono);
+  font-size: 10px; border: 1px solid var(--border); line-height: 1.6;
+}
+
+.acc-log-line     { padding: 1px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.acc-log-line:last-child { border-bottom: none; }
+.acc-log-info     { color: var(--text-secondary); }
+.acc-log-success  { color: #34d399; }
+.acc-log-error    { color: #f87171; }
+.acc-log-warning  { color: #fbbf24; }
+.acc-log-trade    { color: #93c5fd; }
+
+/* ── Toast ── */
+#acc-toast-container {
+  position: fixed; top: 68px; right: 16px; z-index: 10000;
+  display: flex; flex-direction: column; gap: 6px; pointer-events: none;
+}
+
+.acc-toast {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-left: 3px solid var(--accent); padding: 10px 14px;
+  border-radius: 10px; font-family: var(--font-mono); font-size: 11px;
+  max-width: 300px; box-shadow: var(--shadow); color: var(--text-primary);
+  pointer-events: auto;
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 3.7s forwards;
+}
+
+.acc-toast.success { border-left-color: #34d399; }
+.acc-toast.error   { border-left-color: #f87171; }
+.acc-toast.warning { border-left-color: #fbbf24; }
+
+@keyframes toastIn  { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }

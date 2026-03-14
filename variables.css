@@ -1,0 +1,47 @@
+/* =============================================
+   variables.css — Design tokens & theme config
+   ============================================= */
+:root {
+  --font-body:    'DM Sans', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+  --font-display: 'Outfit', sans-serif;
+  --font-brand:   'Bebas Neue', sans-serif;
+}
+
+[data-theme="dark"] {
+  --bg-base:      #060b14;
+  --bg-surface:   #0c1422;
+  --bg-card:      #0f1929;
+  --bg-elevated:  #141f30;
+  --bg-input:     #0a1220;
+  --border:       #1e2f4a;
+  --border-hover: #2e4670;
+  --text-primary:   #e8f0ff;
+  --text-secondary: #8099c8;
+  --text-muted:     #3d5580;
+  --accent:         #3b82f6;
+  --accent-glow:    rgba(59,130,246,0.25);
+  --accent-text:    #93c5fd;
+  --nav-bg:         rgba(6,11,20,0.97);
+  --nav-border:     #1e2f4a;
+  --shadow:         0 20px 40px rgba(0,0,0,0.6);
+}
+
+[data-theme="light"] {
+  --bg-base:      #f0f4fc;
+  --bg-surface:   #ffffff;
+  --bg-card:      #f8faff;
+  --bg-elevated:  #eef2fc;
+  --bg-input:     #f0f5ff;
+  --border:       #d0daf0;
+  --border-hover: #a0b8e8;
+  --text-primary:   #0f1f3d;
+  --text-secondary: #4a5f8a;
+  --text-muted:     #8090b8;
+  --accent:         #2563eb;
+  --accent-glow:    rgba(37,99,235,0.15);
+  --accent-text:    #1d4ed8;
+  --nav-bg:         rgba(255,255,255,0.97);
+  --nav-border:     #d0daf0;
+  --shadow:         0 10px 30px rgba(0,0,50,0.1);
+}
