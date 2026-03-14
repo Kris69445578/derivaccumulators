@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
@@ -8,8 +7,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600;700&family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <!-- Stylesheets -->
   <link rel="stylesheet" href="variables.css">
   <link rel="stylesheet" href="base.css">
   <link rel="stylesheet" href="navbar.css">
@@ -25,22 +22,72 @@
 
   <div id="acc-toast-container"></div>
 
-  <!-- API TOKEN MODAL -->
+  <!-- ══════════════════════════════════════
+       DERIV ACCOUNT DROPDOWN PANEL
+       ══════════════════════════════════════ -->
+  <div id="deriv-account-panel" style="
+    display:none;position:fixed;top:60px;right:12px;width:300px;
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,0.4);
+    z-index:3000;overflow:hidden;
+    animation:modalPop 0.25s cubic-bezier(0.34,1.56,0.64,1);">
+    <div style="background:var(--bg-elevated);padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-family:var(--font-mono);font-size:0.65rem;text-transform:uppercase;letter-spacing:2px;color:var(--accent);">Deriv Accounts</div>
+      <button onclick="derivClosePannel()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;padding:2px 6px;border-radius:6px;">✕</button>
+    </div>
+    <div style="display:flex;border-bottom:1px solid var(--border);">
+      <button id="deriv-tab-real" onclick="derivShowTab('real')" style="flex:1;padding:8px;background:var(--bg-card);border:none;border-bottom:2px solid var(--accent);font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--accent);cursor:pointer;transition:all 0.15s;">Real</button>
+      <button id="deriv-tab-demo" onclick="derivShowTab('demo')" style="flex:1;padding:8px;background:var(--bg-card);border:none;border-bottom:2px solid transparent;font-family:var(--font-mono);font-size:0.72rem;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.15s;">Demo</button>
+    </div>
+    <div id="deriv-account-list" style="max-height:260px;overflow-y:auto;padding:6px 0;"></div>
+    <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <a href="https://app.deriv.com" target="_blank" rel="noopener" style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-muted);text-decoration:none;border-bottom:1px dotted var(--text-muted);">Manage accounts</a>
+      <button onclick="derivLogout()" style="background:transparent;border:1px solid var(--border);color:var(--text-muted);font-family:var(--font-mono);font-size:0.65rem;padding:4px 10px;border-radius:6px;cursor:pointer;transition:all 0.15s;">Logout ↩</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       NAVBAR API TOKEN MODAL
+       ══════════════════════════════════════ -->
+  <div id="nav-token-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:5000;align-items:center;justify-content:center;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:24px;padding:2rem 2rem 1.8rem;width:100%;max-width:400px;margin:1rem;box-shadow:0 30px 60px rgba(0,0,0,0.5);animation:modalPop 0.28s cubic-bezier(0.34,1.56,0.64,1);position:relative;">
+      <div style="width:52px;height:52px;background:var(--accent);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 1.2rem;animation:pulse-hex 2s ease-in-out infinite;">🔑</div>
+      <div style="font-family:var(--font-display);font-size:1.25rem;font-weight:700;color:var(--text-primary);text-align:center;margin-bottom:0.4rem;">API Token</div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);text-align:center;margin-bottom:1.5rem;line-height:1.5;">Paste your Deriv API token to enable all trading features.</div>
+      <div style="position:relative;margin-bottom:0.8rem;">
+        <label style="display:block;font-family:var(--font-mono);font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:6px;">Deriv API Token</label>
+        <input type="password" id="nav-token-input" placeholder="Paste your API token here…" autocomplete="off"
+          onkeydown="if(event.key==='Enter')navTokenConnect()"
+          style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:0.8rem 2.8rem 0.8rem 1rem;color:var(--text-primary);font-family:var(--font-mono);font-size:0.85rem;outline:none;transition:border-color 0.2s;box-sizing:border-box;"/>
+        <button onclick="var i=document.getElementById('nav-token-input');i.type=i.type==='password'?'text':'password';" style="position:absolute;right:10px;bottom:10px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;padding:2px 4px;">👁</button>
+      </div>
+      <div id="nav-token-error" style="font-size:0.75rem;color:#f87171;font-family:var(--font-mono);text-align:center;margin-bottom:0.5rem;min-height:1rem;"></div>
+      <button onclick="navTokenConnect()" style="width:100%;background:var(--accent);border:none;color:#fff;font-family:var(--font-display);font-size:1rem;font-weight:700;padding:0.85rem;border-radius:12px;cursor:pointer;transition:opacity 0.2s;letter-spacing:0.5px;margin-top:0.2rem;">
+        🔗 Connect API Token
+      </button>
+      <button onclick="navTokenClose()" style="width:100%;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-family:var(--font-mono);font-size:0.75rem;font-weight:600;padding:0.6rem;border-radius:10px;cursor:pointer;margin-top:0.55rem;letter-spacing:0.8px;text-transform:uppercase;transition:all 0.2s;">Cancel</button>
+      <div style="text-align:center;margin-top:1rem;font-size:0.75rem;color:var(--text-muted);font-family:var(--font-mono);">
+        Don't have a token? <a href="https://legacy-api.deriv.com/dashboard/" target="_blank" rel="noopener" style="color:var(--accent-text);text-decoration:none;border-bottom:1px dotted var(--accent-text);">Generate one →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Accumulator token modal (kept for fallback, hidden when global token exists) -->
   <div id="acc-token-overlay">
     <div id="acc-token-modal">
       <div class="modal-hex-icon">⬡</div>
       <div class="modal-title">Connect your Deriv Account</div>
-      <div class="modal-sub">Enter your API token to activate the Accumulator Bot and start trading.</div>
+      <div class="modal-sub">Enter your API token to activate the Accumulator Bot.</div>
       <div class="modal-input-wrap">
         <label>Deriv API Token</label>
         <input type="password" id="modal-token-input" class="modal-token-input" placeholder="Paste your API token here…" autocomplete="off"/>
-        <button class="modal-eye-btn" id="modal-eye-btn" onclick="toggleModalEye()" title="Show/hide token">👁</button>
+        <button class="modal-eye-btn" id="modal-eye-btn" onclick="toggleModalEye()" title="Show/hide">👁</button>
       </div>
       <div class="modal-error" id="modal-error"></div>
       <button class="modal-connect-btn" onclick="modalDoConnect()">🔗 Connect &amp; Open Bot</button>
-      <button class="modal-skip-btn" onclick="closeAccModal()">Skip — Open Without Connecting</button>
+      <button class="modal-skip-btn" onclick="closeAccModal()">Skip</button>
       <div class="modal-link-row">
-        Don't have a token? <a href="https://legacy-api.deriv.com/dashboard/" target="_blank" rel="noopener">Get your API token →</a>
+        <a href="https://legacy-api.deriv.com/dashboard/" target="_blank" rel="noopener">Get your API token →</a>
       </div>
     </div>
   </div>
@@ -48,10 +95,7 @@
   <!-- FLOATING LIVE POSITION PANEL -->
   <div id="hl-live-panel">
     <div class="hl-panel-header">
-      <span class="hl-panel-title">
-        <span class="hl-panel-live-dot"></span>
-        Live Position
-      </span>
+      <span class="hl-panel-title"><span class="hl-panel-live-dot"></span>Live Position</span>
       <button class="hl-panel-close" onclick="hlPanelClose()" title="Close">✕</button>
     </div>
     <div class="hl-panel-body" id="hl-panel-body">
@@ -66,7 +110,9 @@
     <span id="hl-pill-label">LIVE POSITION</span>
   </button>
 
-  <!-- NAVBAR -->
+  <!-- ══════════════════════════════════════
+       NAVBAR
+       ══════════════════════════════════════ -->
   <nav class="navbar">
     <div class="navbar-left">
       <span class="navbar-brand">JAHIM</span>
@@ -79,17 +125,42 @@
         <li><a onclick="showTab('balance-checker')"><span class="nav-icon">💰</span> Balance</a></li>
       </ul>
     </div>
-    <div class="theme-switcher" onclick="toggleTheme()" title="Toggle theme">
-      <span class="theme-icon" id="theme-icon-left">🌙</span>
-      <div class="theme-track"><div class="theme-thumb"></div></div>
-      <span class="theme-icon" id="theme-icon-right">☀️</span>
-      <span class="theme-label" id="theme-label">LIGHT</span>
+
+    <!-- RIGHT SIDE: 3 auth buttons OR account display -->
+    <div id="nav-auth-buttons" style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      <a href="https://oauth.deriv.com/oauth2/authorize?app_id=129756"
+        style="display:flex;align-items:center;padding:5px 14px;border-radius:8px;background:var(--accent);border:none;color:#fff;font-family:var(--font-mono);font-size:0.7rem;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;transition:opacity 0.2s;">
+        Log in
+      </a>
+      <button onclick="navTokenOpen()"
+        style="padding:5px 14px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-secondary);font-family:var(--font-mono);font-size:0.7rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:all 0.2s;">
+        API Token
+      </button>
+      <a href="https://track.deriv.com/_j_K_n50wBctMjdsyM5hasGNd7ZgqdRLk/1/" target="_blank" rel="noopener"
+        style="display:flex;align-items:center;padding:5px 14px;border-radius:8px;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:var(--font-mono);font-size:0.7rem;font-weight:700;text-decoration:none;white-space:nowrap;transition:all 0.2s;">
+        Sign up
+      </a>
+    </div>
+
+    <!-- Account display (shown after login, hidden by default) -->
+    <div id="nav-account-display" style="display:none;align-items:center;gap:8px;flex-shrink:0;">
+      <button id="nav-account-btn" onclick="derivHandleLogin()"
+        style="display:flex;align-items:center;gap:7px;padding:5px 12px;border-radius:8px;
+        background:var(--accent);border:none;color:#fff;
+        font-family:var(--font-mono);font-size:0.7rem;font-weight:700;
+        cursor:pointer;transition:all 0.2s;white-space:nowrap;">
+        <span id="nav-account-flag" style="font-size:1rem;">🇺🇸</span>
+        <div style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;">
+          <span id="nav-account-id" style="font-size:0.68rem;opacity:0.8;"></span>
+          <span id="nav-account-bal" style="font-size:0.78rem;font-weight:800;font-family:var(--font-display);"></span>
+        </div>
+        <span style="font-size:0.65rem;opacity:0.7;">▼</span>
+      </button>
     </div>
   </nav>
 
   <div id="tab-shell"></div>
 
-  <!-- Scripts -->
   <script src="survival.js"></script>
   <script src="accumulator-engine.js"></script>
   <script src="accumulator-bot.js"></script>
