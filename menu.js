@@ -9,9 +9,24 @@ function buildMenuTab() {
 <div id="menu-tab" class="tab-content active">
   <div class="menu-tab-wrapper">
 
+    <!-- Theme toggle (moved from navbar) -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:1.2rem;">
+      <div onclick="toggleTheme()" id="menu-theme-track" data-dark="0"
+        style="display:flex;align-items:center;gap:10px;padding:8px 16px;
+        background:var(--bg-card);border:1px solid var(--border);border-radius:30px;
+        cursor:pointer;transition:all 0.2s;user-select:none;">
+        <span style="font-size:1rem;">🌙</span>
+        <div style="position:relative;width:40px;height:22px;background:var(--bg-input);border:1px solid var(--border);border-radius:22px;transition:background 0.3s;flex-shrink:0;" id="menu-theme-pill">
+          <div id="menu-theme-thumb" style="position:absolute;top:3px;left:3px;width:14px;height:14px;background:var(--text-muted);border-radius:50%;transition:transform 0.25s ease,background 0.3s;"></div>
+        </div>
+        <span id="menu-theme-label" style="font-family:var(--font-mono);font-size:0.72rem;font-weight:600;color:var(--text-secondary);letter-spacing:0.5px;text-transform:uppercase;min-width:60px;">Light Mode</span>
+        <span style="font-size:1rem;">☀️</span>
+      </div>
+    </div>
+
     <div class="menu-hero">
       <div class="menu-hero-badge">🚀 JAHIM TRADER · HL Suite v3.0</div>
-      <h1>Welcome to your Smart<br>D-Traders Suite</h1>
+      <h1>Welcome to Wamiti's<br>Higher/Lower Suite</h1>
       <p>Your complete toolkit for Deriv volatility trading — signals, accumulator bot, and digit analysis all in one place.</p>
     </div>
 
