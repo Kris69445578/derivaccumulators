@@ -41,7 +41,10 @@ function showTab(tabId) {
 
   /* Lazy init each tab on first visit */
   if (tabId === 'generator')        initializeGenerator();
-  else if (tabId === 'digits-analyzer') initializeDigitsAnalyzer();
+  else if (tabId === 'digits-analyzer') {
+    initializeDigitsAnalyzer();
+    if (!digitTrade.authorized) setTimeout(digitOpenModal, 400);
+  }
   else if (tabId === 'balance-checker') initializeBalanceChecker();
   else if (tabId === 'bot-trading')     initializeBotTrading();
   else if (tabId === 'accum-bot')   { initAccumBot(); if (!acc.connected) openAccModal(); }
