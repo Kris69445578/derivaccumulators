@@ -6,19 +6,19 @@
 
 /* ── Constants ── */
 const DIGIT_VOLS = [
-  { symbol: '1HZ10V',  name: 'Volatility 10 (1s)'  },
-  { symbol: '1HZ15V',  name: 'Volatility 15 (1s)'  },
-  { symbol: '1HZ25V',  name: 'Volatility 25 (1s)'  },
-  { symbol: '1HZ30V',  name: 'Volatility 30 (1s)'  },
-  { symbol: '1HZ50V',  name: 'Volatility 50 (1s)'  },
-  { symbol: '1HZ75V',  name: 'Volatility 75 (1s)'  },
-  { symbol: '1HZ90V',  name: 'Volatility 90 (1s)'  },
-  { symbol: '1HZ100V', name: 'Volatility 100 (1s)' },
-  { symbol: 'R_10',    name: 'Volatility 10'        },
-  { symbol: 'R_25',    name: 'Volatility 25'        },
-  { symbol: 'R_50',    name: 'Volatility 50'        },
-  { symbol: 'R_75',    name: 'Volatility 75'        },
-  { symbol: 'R_100',   name: 'Volatility 100'       },
+  { symbol: '1HZ10V',  name: 'Vol 10 (1s)'  },
+  { symbol: '1HZ15V',  name: 'Vol 15 (1s)'  },
+  { symbol: '1HZ25V',  name: 'Vol 25 (1s)'  },
+  { symbol: '1HZ30V',  name: 'Vol 30 (1s)'  },
+  { symbol: '1HZ50V',  name: 'Vol 50 (1s)'  },
+  { symbol: '1HZ75V',  name: 'Vol 75 (1s)'  },
+  { symbol: '1HZ90V',  name: 'Vol 90 (1s)'  },
+  { symbol: '1HZ100V', name: 'Vol 100 (1s)' },
+  { symbol: 'R_10',    name: 'Vol 10'        },
+  { symbol: 'R_25',    name: 'Vol 25'        },
+  { symbol: 'R_50',    name: 'Vol 50'        },
+  { symbol: 'R_75',    name: 'Vol 75'        },
+  { symbol: 'R_100',   name: 'Vol 100'       },
 ];
 const DIGIT_HIST = 1000;
 const DIGIT_MIN  = 50;
@@ -302,6 +302,13 @@ function initializeDigitsAnalyzer() {
    DIGIT TOKEN MODAL
    ════════════════════════════════════════════ */
 function digitOpenModal() {
+  /* If global token already set — connect silently, no modal */
+  if (typeof globalAuth !== 'undefined' && globalAuth.connected && globalAuth.token) {
+    var inp = document.getElementById('digit-trade-token');
+    if (inp) inp.value = globalAuth.token;
+    if (!digitTrade.authorized && typeof digitConnectTrading === 'function') digitConnectTrading();
+    return;
+  }
   var overlay = document.getElementById('digit-token-overlay');
   if (overlay) {
     overlay.style.display = 'flex';
@@ -377,6 +384,18 @@ function digitHandleMessage(d) {
       digitToast('Connected · Balance: ' + digitTrade.balance.toFixed(2) + ' ' + digitTrade.currency, 'success');
       digitCloseModal();
       digitTrade.ws.send(JSON.stringify({ balance: 1, subscribe: 1 }));
+      /* Promote to global token if not already set */
+      if (typeof globalAuth !== 'undefined' && !globalAuth.connected) {
+        var tInp = document.getElementById('digit-trade-token');
+        var tok  = tInp ? tInp.value.trim() : '';
+        if (tok && typeof globalSetToken === 'function') {
+          globalSetToken(tok, d.authorize.loginid, d.authorize.currency, digitTrade.balance, d.authorize.is_virtual);
+          if (typeof derivState !== 'undefined') {
+            derivState.accounts = [{ loginid: d.authorize.loginid, token: tok, currency: d.authorize.currency, balance: digitTrade.balance, is_virtual: d.authorize.is_virtual }];
+            derivState.activeLoginid = d.authorize.loginid;
+          }
+        }
+      }
     } else {
       if (errEl) errEl.textContent = 'Auth failed: ' + d.error.message;
       digitToast('Auth failed: ' + d.error.message, 'error');
