@@ -37,6 +37,16 @@ function globalSetToken(token, loginid, currency, balance, is_virtual) {
   globalAuth.is_virtual = is_virtual || false;
   globalAuth.connected  = true;
 
+  /* Persist session so it survives page refresh */
+  try {
+    localStorage.setItem('jahim_session', JSON.stringify({
+      token:      token,
+      loginid:    loginid    || '',
+      currency:   currency   || 'USD',
+      is_virtual: is_virtual || false,
+    }));
+  } catch(e) {}
+
   /* Push to accumulator bot config */
   const accField = document.getElementById('acc-cfg-token');
   if (accField) accField.value = token;
@@ -221,9 +231,17 @@ function navTokenConnect() {
         globalSetToken(token, loginid, currency, bal, is_virtual);
 
         /* Add to state for dropdown */
-        derivState.accounts      = [{ loginid: loginid, token: token, currency: currency, balance: bal, is_virtual: is_virtual }];
+        var tokenAccount = { loginid: loginid, token: token, currency: currency, balance: bal, is_virtual: is_virtual };
+        derivState.accounts      = [tokenAccount];
         derivState.activeLoginid = loginid;
         derivShowTab(is_virtual ? 'demo' : 'real');
+
+        /* Persist for refresh */
+        try {
+          localStorage.setItem('jahim_accounts', JSON.stringify(
+            [{ loginid: loginid, token: token, currency: currency, is_virtual: is_virtual }]
+          ));
+        } catch(e) {}
 
         if (typeof accToast === 'function') accToast('Connected · ' + loginid + ' · ' + bal.toFixed(2) + ' ' + currency, 'success');
 
@@ -588,6 +606,13 @@ function derivParseOAuthCallback() {
   window.history.replaceState({}, document.title, window.location.pathname);
   derivState.accounts = accounts;
 
+  /* Persist all accounts for refresh restore */
+  try {
+    localStorage.setItem('jahim_accounts', JSON.stringify(
+      accounts.map(function(a) { return { loginid: a.loginid, token: a.token, currency: a.currency, is_virtual: a.is_virtual }; })
+    ));
+  } catch(e) {}
+
   /* Log for debugging */
   console.log('[JAHIM] OAuth accounts:', accounts.map(function(a){ return a.loginid + ' virtual:' + a.is_virtual; }));
 
@@ -628,6 +653,12 @@ function derivLogout() {
   globalAuth.loginid       = '';
   globalAuth.connected     = false;
 
+  /* Clear persisted session */
+  try {
+    localStorage.removeItem('jahim_session');
+    localStorage.removeItem('jahim_accounts');
+  } catch(e) {}
+
   if (derivState.ws) { try { derivState.ws.close(); } catch(e){} derivState.ws = null; }
   if (typeof acc !== 'undefined' && acc.connected && typeof accDisconnect === 'function') accDisconnect();
 
@@ -644,13 +675,78 @@ function derivLogout() {
 /* ══════════════════════════════════════════
    BOOT
    ══════════════════════════════════════════ */
+function derivRestoreSession() {
+  try {
+    var sessionRaw  = localStorage.getItem('jahim_session');
+    var accountsRaw = localStorage.getItem('jahim_accounts');
+    if (!sessionRaw) return false;
+
+    var session  = JSON.parse(sessionRaw);
+    var accounts = accountsRaw ? JSON.parse(accountsRaw) : [];
+
+    if (!session.token || session.token.length < 5) return false;
+
+    /* Restore accounts into state */
+    derivState.accounts = accounts.map(function(a) {
+      return { loginid: a.loginid, token: a.token, currency: a.currency, balance: null, is_virtual: a.is_virtual };
+    });
+
+    /* If no accounts array stored, create one from session */
+    if (!derivState.accounts.length) {
+      derivState.accounts = [{
+        loginid:    session.loginid,
+        token:      session.token,
+        currency:   session.currency,
+        balance:    null,
+        is_virtual: session.is_virtual,
+      }];
+    }
+
+    derivState.activeLoginid = session.loginid;
+
+    /* Show account display immediately (no waiting for WS) */
+    globalAuth.token      = session.token;
+    globalAuth.loginid    = session.loginid;
+    globalAuth.currency   = session.currency;
+    globalAuth.is_virtual = session.is_virtual;
+    globalAuth.balance    = 0;
+    globalAuth.connected  = true;
+    navShowAccountDisplay();
+    derivShowTab(session.is_virtual ? 'demo' : 'real');
+
+    /* Push token to feature fields */
+    var accField = document.getElementById('acc-cfg-token');
+    if (accField) accField.value = session.token;
+    var digitInp = document.getElementById('digit-trade-token');
+    if (digitInp) digitInp.value = session.token;
+
+    /* Re-subscribe each account to live balance (also gets fresh balance) */
+    derivState.accounts.forEach(function(a) {
+      derivSubscribeBalance(a.token, a.loginid, function(initialBal, currency) {
+        a.balance  = initialBal;
+        a.currency = currency || a.currency;
+        if (a.loginid === session.loginid) {
+          globalAuth.balance   = initialBal;
+          globalAuth.currency  = currency || session.currency;
+          derivUpdateNavAccountBtn();
+        }
+        derivRenderAccountList();
+      });
+    });
+
+    console.log('[JAHIM] Session restored for', session.loginid);
+    return true;
+  } catch(e) {
+    console.warn('[JAHIM] Session restore failed:', e);
+    try { localStorage.removeItem('jahim_session'); localStorage.removeItem('jahim_accounts'); } catch(ex){}
+    return false;
+  }
+}
+
 window.onload = () => {
   injectTabs();
   showTab('menu-tab');
   startEmojiRain();
-
-  /* Handle OAuth redirect */
-  derivParseOAuthCallback();
 
   /* Sync theme thumb */
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -658,4 +754,8 @@ window.onload = () => {
   const thumb  = document.getElementById('menu-theme-thumb');
   if (lbl)   lbl.textContent       = isDark ? 'Dark Mode' : 'Light Mode';
   if (thumb) thumb.style.transform = isDark ? 'translateX(18px)' : 'translateX(0px)';
+
+  /* Try restoring saved session first, then check OAuth redirect */
+  var restored = derivRestoreSession();
+  if (!restored) derivParseOAuthCallback();
 };
