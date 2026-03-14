@@ -758,4 +758,7 @@ window.onload = () => {
   /* Try restoring saved session first, then check OAuth redirect */
   var restored = derivRestoreSession();
   if (!restored) derivParseOAuthCallback();
+
+  /* Dismiss loading screen */
+  if (typeof loaderDone === 'function') loaderDone();
 };
