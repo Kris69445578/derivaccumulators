@@ -6,19 +6,19 @@
 
 /* ── Constants ── */
 const DIGIT_VOLS = [
-  { symbol: '1HZ10V',  name: 'Vol 10 (1s)'  },
-  { symbol: '1HZ15V',  name: 'Vol 15 (1s)'  },
-  { symbol: '1HZ25V',  name: 'Vol 25 (1s)'  },
-  { symbol: '1HZ30V',  name: 'Vol 30 (1s)'  },
-  { symbol: '1HZ50V',  name: 'Vol 50 (1s)'  },
-  { symbol: '1HZ75V',  name: 'Vol 75 (1s)'  },
-  { symbol: '1HZ90V',  name: 'Vol 90 (1s)'  },
-  { symbol: '1HZ100V', name: 'Vol 100 (1s)' },
-  { symbol: 'R_10',    name: 'Vol 10'        },
-  { symbol: 'R_25',    name: 'Vol 25'        },
-  { symbol: 'R_50',    name: 'Vol 50'        },
-  { symbol: 'R_75',    name: 'Vol 75'        },
-  { symbol: 'R_100',   name: 'Vol 100'       },
+  { symbol: '1HZ10V',  name: 'Volatility 10 (1s)'  },
+  { symbol: '1HZ15V',  name: 'Volatility 15 (1s)'  },
+  { symbol: '1HZ25V',  name: 'Volatility 25 (1s)'  },
+  { symbol: '1HZ30V',  name: 'Volatility 30 (1s)'  },
+  { symbol: '1HZ50V',  name: 'Volatility 50 (1s)'  },
+  { symbol: '1HZ75V',  name: 'Volatility 75 (1s)'  },
+  { symbol: '1HZ90V',  name: 'Volatility 90 (1s)'  },
+  { symbol: '1HZ100V', name: 'Volatility 100 (1s)' },
+  { symbol: 'R_10',    name: 'Volatility 10'        },
+  { symbol: 'R_25',    name: 'Volatility 25'        },
+  { symbol: 'R_50',    name: 'Volatility 50'        },
+  { symbol: 'R_75',    name: 'Volatility 75'        },
+  { symbol: 'R_100',   name: 'Volatility 100'       },
 ];
 const DIGIT_HIST = 1000;
 const DIGIT_MIN  = 50;
@@ -156,7 +156,7 @@ function initializeDigitsAnalyzer() {
           + '</div>'
 
           /* trade button */
-          + '<button id="dtrade-btn-' + v.symbol + '" onclick="digitPlaceTrade(\'' + v.symbol + '\')" style="width:100%;padding:11px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#6366f1);border:none;color:#fff;font-family:var(--font-display);font-size:0.9rem;font-weight:800;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;">🎯 PLACE MATCH TRADE</button>'
+          + '<button id="dtrade-btn-' + v.symbol + '" onclick="digitPlaceTrade(\'' + v.symbol + '\')" style="width:100%;padding:11px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#6366f1);border:none;color:#fff;font-family:var(--font-display);font-size:0.9rem;font-weight:800;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;">PLACE MATCH 0 TRADE</button>'
 
           /* active trade */
           + '<div id="dactive-' + v.symbol + '" style="display:none;margin-top:8px;background:var(--accent-glow);border:1px solid var(--accent);border-radius:10px;padding:8px 10px;">'
@@ -587,6 +587,26 @@ function digitUpdateMartUI(sym) {
 /* ════════════════════════════════════════════
    UI HELPERS
    ════════════════════════════════════════════ */
+function digitGetTradeLabel(sym) {
+  var s      = dStore[sym];
+  var ct     = s ? s.contractType  : 'DIGITMATCH';
+  var digit  = s ? s.selectedDigit : 0;
+  var ctNames = {
+    DIGITMATCH:  'MATCH',
+    DIGITDIFF:   'DIFFERS',
+    DIGITOVER:   'OVER',
+    DIGITUNDER:  'UNDER',
+    DIGITEVEN:   'EVEN',
+    DIGITODD:    'ODD',
+  };
+  var ctName = ctNames[ct] || ct;
+  /* Even and Odd don't need a digit */
+  if (ct === 'DIGITEVEN' || ct === 'DIGITODD') {
+    return 'PLACE ' + ctName + ' TRADE';
+  }
+  return 'PLACE ' + ctName + ' ' + digit + ' TRADE';
+}
+
 function digitSetContractType(sym, ct, btn) {
   if (!dStore[sym]) return;
   dStore[sym].contractType = ct;
@@ -604,8 +624,7 @@ function digitSetContractType(sym, ct, btn) {
   var selRow = document.getElementById('dsel-row-' + sym);
   if (selRow) selRow.style.display = ['DIGITMATCH','DIGITDIFF','DIGITOVER','DIGITUNDER'].includes(ct) ? 'flex' : 'none';
   var tradeBtn = document.getElementById('dtrade-btn-' + sym);
-  var labels   = { DIGITMATCH:'🎯 PLACE MATCH TRADE', DIGITDIFF:'❌ PLACE DIFFERS TRADE', DIGITOVER:'⬆️ PLACE OVER TRADE', DIGITUNDER:'⬇️ PLACE UNDER TRADE', DIGITEVEN:'🔵 PLACE EVEN TRADE', DIGITODD:'🔴 PLACE ODD TRADE' };
-  if (tradeBtn) tradeBtn.textContent = labels[ct] || '🎰 PLACE TRADE';
+  if (tradeBtn) tradeBtn.textContent = digitGetTradeLabel(sym);
 }
 
 function digitSelectForTrade(sym, d) {
@@ -613,6 +632,9 @@ function digitSelectForTrade(sym, d) {
   dStore[sym].selectedDigit = d;
   var el = document.getElementById('dsel-digit-' + sym);
   if (el) el.textContent = d;
+  /* refresh trade button label to show selected digit */
+  var btn = document.getElementById('dtrade-btn-' + sym);
+  if (btn && !btn.disabled) btn.textContent = digitGetTradeLabel(sym);
 }
 
 function digitSetTradeBtn(sym, loading) {
@@ -622,10 +644,7 @@ function digitSetTradeBtn(sym, loading) {
     btn.disabled = true; btn.textContent = '⏳ WAITING FOR RESULT…'; btn.style.opacity = '0.6';
   } else {
     btn.disabled = false; btn.style.opacity = '1';
-    var s  = dStore[sym];
-    var ct = s ? s.contractType : 'DIGITMATCH';
-    var labels = { DIGITMATCH:'🎯 PLACE MATCH TRADE', DIGITDIFF:'❌ PLACE DIFFERS TRADE', DIGITOVER:'⬆️ PLACE OVER TRADE', DIGITUNDER:'⬇️ PLACE UNDER TRADE', DIGITEVEN:'🔵 PLACE EVEN TRADE', DIGITODD:'🔴 PLACE ODD TRADE' };
-    btn.textContent = labels[ct] || '🎰 PLACE TRADE';
+    btn.textContent = digitGetTradeLabel(sym);
   }
 }
 
