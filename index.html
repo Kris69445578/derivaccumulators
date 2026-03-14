@@ -17,8 +17,238 @@
   <link rel="stylesheet" href="modal.css">
   <link rel="stylesheet" href="menu-tab.css">
   <link rel="stylesheet" href="responsive.css">
+  <style>
+    /* ═══════════════════════════════
+       LOADING SCREEN
+       ═══════════════════════════════ */
+    #jahim-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: #060b14;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      transition: opacity 0.6s ease, visibility 0.6s ease;
+    }
+
+    #jahim-loader.fade-out {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    /* Brand */
+    .loader-brand {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 3.5rem;
+      letter-spacing: 8px;
+      color: #3b82f6;
+      line-height: 1;
+      animation: loaderPulse 2s ease-in-out infinite;
+    }
+
+    .loader-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #3d5580;
+      margin-top: 4px;
+      margin-bottom: 48px;
+    }
+
+    /* Hexagon spinner */
+    .loader-hex-wrap {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      margin-bottom: 36px;
+    }
+
+    .loader-hex {
+      width: 64px;
+      height: 64px;
+      background: #3b82f6;
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      animation: loaderHexSpin 3s linear infinite;
+    }
+
+    .loader-hex-ring {
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      border-top-color: #3b82f6;
+      border-right-color: rgba(59,130,246,0.3);
+      animation: loaderRingSpin 1.2s linear infinite;
+    }
+
+    .loader-hex-ring2 {
+      position: absolute;
+      inset: -16px;
+      border-radius: 50%;
+      border: 1px solid transparent;
+      border-bottom-color: rgba(59,130,246,0.4);
+      border-left-color: rgba(59,130,246,0.2);
+      animation: loaderRingSpin 2s linear infinite reverse;
+    }
+
+    /* Progress bar */
+    .loader-progress-wrap {
+      width: 220px;
+      height: 3px;
+      background: rgba(59,130,246,0.12);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .loader-progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #1d4ed8, #3b82f6, #60a5fa);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+
+    /* Status text */
+    .loader-status {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem;
+      color: #3d5580;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      min-height: 1rem;
+      transition: opacity 0.3s;
+    }
+
+    /* Dot indicators */
+    .loader-dots {
+      display: flex;
+      gap: 6px;
+      margin-top: 24px;
+    }
+
+    .loader-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #1e2f4a;
+      animation: loaderDotBounce 1.4s ease-in-out infinite;
+    }
+    .loader-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loader-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    /* Animations */
+    @keyframes loaderPulse {
+      0%, 100% { opacity: 1; text-shadow: 0 0 20px rgba(59,130,246,0.3); }
+      50%       { opacity: 0.7; text-shadow: 0 0 40px rgba(59,130,246,0.6); }
+    }
+
+    @keyframes loaderHexSpin {
+      0%   { transform: rotate(0deg) scale(1); }
+      50%  { transform: rotate(180deg) scale(0.9); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+
+    @keyframes loaderRingSpin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes loaderDotBounce {
+      0%, 80%, 100% { transform: scale(1);   background: #1e2f4a; }
+      40%            { transform: scale(1.6); background: #3b82f6; }
+    }
+  </style>
 </head>
 <body class="no-select">
+
+  <!-- ═══════════════════════════════
+       LOADING SCREEN
+       ═══════════════════════════════ -->
+  <div id="jahim-loader">
+    <div class="loader-brand">JAHIM</div>
+    <div class="loader-sub">HL Suite · Loading</div>
+
+    <div class="loader-hex-wrap">
+      <div class="loader-hex-ring2"></div>
+      <div class="loader-hex-ring"></div>
+      <div class="loader-hex">💵</div>
+    </div>
+
+    <div class="loader-progress-wrap">
+      <div class="loader-progress-fill" id="loader-bar"></div>
+    </div>
+    <div class="loader-status" id="loader-status">Initializing…</div>
+
+    <div class="loader-dots">
+      <div class="loader-dot"></div>
+      <div class="loader-dot"></div>
+      <div class="loader-dot"></div>
+    </div>
+  </div>
+
+  <script>
+    /* ── Loading screen controller ── */
+    var loaderSteps = [
+      { pct: 10,  msg: 'Initializing…',          delay: 500  },
+      { pct: 22,  msg: 'Loading assets…',         delay: 1500 },
+      { pct: 38,  msg: 'Connecting to Deriv…',    delay: 1800 },
+      { pct: 54,  msg: 'Building interface…',     delay: 1600 },
+      { pct: 68,  msg: 'Loading market data…',    delay: 1500 },
+      { pct: 82,  msg: 'Restoring session…',      delay: 1400 },
+      { pct: 94,  msg: 'Almost ready…',           delay: 1200 },
+      { pct: 100, msg: 'Ready!',                  delay: 500  },
+    ];
+    /* Total ~10 seconds */
+
+    var loaderIdx = 0;
+    var loaderBar    = document.getElementById('loader-bar');
+    var loaderStatus = document.getElementById('loader-status');
+    var loaderReady  = false; /* set true when app finishes loading */
+    var loaderDone   = null;  /* defined below */
+
+    function loaderStep() {
+      if (loaderIdx >= loaderSteps.length) {
+        /* Steps finished — if app already ready, dismiss now */
+        if (loaderReady) loaderDismiss();
+        return;
+      }
+      var step = loaderSteps[loaderIdx];
+      if (loaderBar)    loaderBar.style.width    = step.pct + '%';
+      if (loaderStatus) loaderStatus.textContent = step.msg;
+      loaderIdx++;
+      setTimeout(loaderStep, step.delay);
+    }
+
+    function loaderDismiss() {
+      if (loaderBar)    loaderBar.style.width    = '100%';
+      if (loaderStatus) loaderStatus.textContent = 'Ready!';
+      setTimeout(function() {
+        var loader = document.getElementById('jahim-loader');
+        if (loader) loader.classList.add('fade-out');
+        setTimeout(function() {
+          if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
+        }, 700);
+      }, 400);
+    }
+
+    /* Called by app.js when everything is loaded */
+    loaderDone = function() {
+      loaderReady = true;
+      /* Only dismiss after steps complete (respects the 10s minimum) */
+      if (loaderIdx >= loaderSteps.length) loaderDismiss();
+    };
+
+    loaderStep();
+  </script>
 
   <div id="acc-toast-container"></div>
 
