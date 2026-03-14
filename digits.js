@@ -6,19 +6,19 @@
 
 /* ── Constants ── */
 const DIGIT_VOLS = [
-  { symbol: '1HZ10V',  name: 'Vol 10 (1s)'  },
-  { symbol: '1HZ15V',  name: 'Vol 15 (1s)'  },
-  { symbol: '1HZ25V',  name: 'Vol 25 (1s)'  },
-  { symbol: '1HZ30V',  name: 'Vol 30 (1s)'  },
-  { symbol: '1HZ50V',  name: 'Vol 50 (1s)'  },
-  { symbol: '1HZ75V',  name: 'Vol 75 (1s)'  },
-  { symbol: '1HZ90V',  name: 'Vol 90 (1s)'  },
-  { symbol: '1HZ100V', name: 'Vol 100 (1s)' },
-  { symbol: 'R_10',    name: 'Vol 10'        },
-  { symbol: 'R_25',    name: 'Vol 25'        },
-  { symbol: 'R_50',    name: 'Vol 50'        },
-  { symbol: 'R_75',    name: 'Vol 75'        },
-  { symbol: 'R_100',   name: 'Vol 100'       },
+  { symbol: '1HZ10V',  name: 'Volatility 10 (1s)'  },
+  { symbol: '1HZ15V',  name: 'Volatility 15 (1s)'  },
+  { symbol: '1HZ25V',  name: 'Volatility 25 (1s)'  },
+  { symbol: '1HZ30V',  name: 'Volatility 30 (1s)'  },
+  { symbol: '1HZ50V',  name: 'Volatility 50 (1s)'  },
+  { symbol: '1HZ75V',  name: 'Volatility 75 (1s)'  },
+  { symbol: '1HZ90V',  name: 'Volatility 90 (1s)'  },
+  { symbol: '1HZ100V', name: 'Volatility 100 (1s)' },
+  { symbol: 'R_10',    name: 'Volatility 10'        },
+  { symbol: 'R_25',    name: 'Volatility 25'        },
+  { symbol: 'R_50',    name: 'Volatility 50'        },
+  { symbol: 'R_75',    name: 'Volatility 75'        },
+  { symbol: 'R_100',   name: 'Volatility 100'       },
 ];
 const DIGIT_HIST = 1000;
 const DIGIT_MIN  = 50;
