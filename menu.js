@@ -11,7 +11,7 @@ function buildMenuTab() {
 
     <div class="menu-hero">
       <div class="menu-hero-badge">🚀 JAHIM TRADER · HL Suite v3.0</div>
-      <h1>Welcome to Wamiti's<br>Higher/Lower Suite</h1>
+      <h1>Welcome to your Smart<br>D-Traders Suite</h1>
       <p>Your complete toolkit for Deriv volatility trading — signals, accumulator bot, and digit analysis all in one place.</p>
     </div>
 
