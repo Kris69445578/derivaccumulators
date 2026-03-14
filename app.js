@@ -68,15 +68,15 @@ function navShowAccountDisplay() {
 }
 
 function derivUpdateNavAccountBtn() {
-  const flag   = document.getElementById('nav-account-flag');
+  const flagEl = document.getElementById('nav-account-flag');
   const idEl   = document.getElementById('nav-account-id');
   const balEl  = document.getElementById('nav-account-bal');
   const btn    = document.getElementById('nav-account-btn');
 
-  if (flag)  flag.textContent  = derivGetFlag(globalAuth.currency);
-  if (idEl)  idEl.textContent  = globalAuth.loginid;
-  if (balEl) balEl.textContent = globalAuth.balance.toFixed(2) + ' ' + globalAuth.currency;
-  if (btn)   btn.style.background = globalAuth.is_virtual ? '#7c3aed' : 'var(--accent)';
+  if (flagEl) flagEl.innerHTML = derivGetIcon(globalAuth.currency, globalAuth.is_virtual);
+  if (idEl)   idEl.textContent  = globalAuth.loginid;
+  if (balEl)  balEl.textContent = derivFormatBalance(globalAuth.balance, globalAuth.currency);
+  if (btn)    btn.style.background = globalAuth.is_virtual ? '#4b5563' : 'var(--accent)';
 }
 
 /* ══════════════════════════════════════════
@@ -200,34 +200,39 @@ function navTokenConnect() {
 
   navTokenClose();
 
-  /* Connect via WS to get account info, then call globalSetToken */
-  const ws = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=129756');
-  ws.onopen = () => ws.send(JSON.stringify({ authorize: token }));
-  ws.onmessage = e => {
+  /* Connect, get account info, set global token, start live balance stream */
+  var tokenWs = new WebSocket(DERIV_WS_URL);
+  tokenWs.onopen = function() { tokenWs.send(JSON.stringify({ authorize: token })); };
+  tokenWs.onmessage = function(e) {
     try {
-      const d = JSON.parse(e.data);
+      var d = JSON.parse(e.data);
       if (d.msg_type === 'authorize') {
-        ws.close();
+        tokenWs.close();
         if (d.error) {
           if (typeof accToast === 'function') accToast('Token error: ' + d.error.message, 'error');
           return;
         }
-        const auth = d.authorize;
-        globalSetToken(
-          token,
-          auth.loginid,
-          auth.currency,
-          parseFloat(auth.balance),
-          auth.is_virtual
-        );
-        /* Add to derivState accounts for dropdown */
-        derivState.accounts = [{ loginid: auth.loginid, token, currency: auth.currency, balance: parseFloat(auth.balance), is_virtual: auth.is_virtual }];
-        derivState.activeLoginid = auth.loginid;
-        if (typeof accToast === 'function') accToast('Connected · ' + auth.loginid + ' · ' + parseFloat(auth.balance).toFixed(2) + ' ' + auth.currency, 'success');
+        var auth = d.authorize;
+        var bal  = parseFloat(auth.balance);
+        var loginid   = auth.loginid;
+        var currency  = auth.currency;
+        var is_virtual= auth.is_virtual || loginid.startsWith('VR') || loginid.startsWith('vr');
+
+        globalSetToken(token, loginid, currency, bal, is_virtual);
+
+        /* Add to state for dropdown */
+        derivState.accounts      = [{ loginid: loginid, token: token, currency: currency, balance: bal, is_virtual: is_virtual }];
+        derivState.activeLoginid = loginid;
+        derivShowTab(is_virtual ? 'demo' : 'real');
+
+        if (typeof accToast === 'function') accToast('Connected · ' + loginid + ' · ' + bal.toFixed(2) + ' ' + currency, 'success');
+
+        /* Start live balance stream */
+        derivSubscribeBalance(token, loginid);
       }
     } catch(ex){}
   };
-  ws.onerror = () => {
+  tokenWs.onerror = function() {
     if (typeof accToast === 'function') accToast('Connection error — check token', 'error');
   };
 }
@@ -249,12 +254,49 @@ const derivState = {
 
 const DERIV_WS_URL = 'wss://ws.binaryws.com/websockets/v3?app_id=129756';
 
-const CURRENCY_FLAGS = {
-  USD:'🇺🇸', EUR:'🇪🇺', GBP:'🇬🇧', AUD:'🇦🇺',
-  CAD:'🇨🇦', NZD:'🇳🇿', SGD:'🇸🇬', MYR:'🇲🇾',
-  USDC:'💵', USDT:'💵', BTC:'₿', ETH:'Ξ',
-};
-function derivGetFlag(cur) { return CURRENCY_FLAGS[cur] || '💰'; }
+/* ── Currency icons — proper SVG matching real logos ── */
+function derivGetIcon(cur, is_virtual) {
+  var s = 'width="24" height="24" viewBox="0 0 32 32"';
+
+  /* Demo — teal circle with D */
+  if (is_virtual) return '<svg ' + s + '><circle cx="16" cy="16" r="16" fill="#5aacaa"/><text x="16" y="21" text-anchor="middle" fill="white" font-size="16" font-weight="700" font-family="Arial,sans-serif">D</text></svg>';
+
+  if (cur === 'USD') {
+    /* US flag circle */
+    return '<svg ' + s + '><clipPath id="c"><circle cx="16" cy="16" r="16"/></clipPath><g clip-path="url(#c)"><rect width="32" height="32" fill="#B22234"/><rect y="2.46" width="32" height="2.46" fill="white"/><rect y="7.38" width="32" height="2.46" fill="white"/><rect y="12.3" width="32" height="2.46" fill="white"/><rect y="17.23" width="32" height="2.46" fill="white"/><rect y="22.15" width="32" height="2.46" fill="white"/><rect y="27.08" width="32" height="2.46" fill="white"/><rect width="14" height="17.23" fill="#3C3B6E"/><g fill="white"><circle cx="2" cy="2" r="1"/><circle cx="5" cy="2" r="1"/><circle cx="8" cy="2" r="1"/><circle cx="11" cy="2" r="1"/><circle cx="2" cy="5" r="1"/><circle cx="5" cy="5" r="1"/><circle cx="8" cy="5" r="1"/><circle cx="11" cy="5" r="1"/><circle cx="3.5" cy="3.5" r="1"/><circle cx="6.5" cy="3.5" r="1"/><circle cx="9.5" cy="3.5" r="1"/><circle cx="12.5" cy="3.5" r="1"/><circle cx="2" cy="8" r="1"/><circle cx="5" cy="8" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="11" cy="8" r="1"/><circle cx="2" cy="11" r="1"/><circle cx="5" cy="11" r="1"/><circle cx="8" cy="11" r="1"/><circle cx="11" cy="11" r="1"/><circle cx="3.5" cy="9.5" r="1"/><circle cx="6.5" cy="9.5" r="1"/><circle cx="9.5" cy="9.5" r="1"/><circle cx="12.5" cy="9.5" r="1"/></g></g></svg>';
+  }
+
+  if (cur === 'USDC') {
+    /* USDC — blue circle with $ and arc */
+    return '<svg ' + s + '><circle cx="16" cy="16" r="16" fill="#2775CA"/><text x="16" y="22" text-anchor="middle" fill="white" font-size="16" font-weight="800" font-family="Arial,sans-serif">$</text><path d="M8 10 A10 10 0 0 1 24 10" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M8 22 A10 10 0 0 0 24 22" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>';
+  }
+
+  if (cur === 'USDT') {
+    /* USDT — teal diamond with T */
+    return '<svg ' + s + '><polygon points="16,1 31,9 31,23 16,31 1,23 1,9" fill="#26A17B"/><text x="16" y="22" text-anchor="middle" fill="white" font-size="17" font-weight="800" font-family="Arial,sans-serif">T</text><rect x="9" y="13" width="14" height="2.5" rx="1.25" fill="white"/></svg>';
+  }
+
+  if (cur === 'BTC') {
+    /* Bitcoin — orange circle with B */
+    return '<svg ' + s + '><circle cx="16" cy="16" r="16" fill="#F7931A"/><text x="17" y="22" text-anchor="middle" fill="white" font-size="17" font-weight="900" font-family="Arial,sans-serif" transform="rotate(-15,16,16)">B</text><line x1="14" y1="6" x2="14" y2="26" stroke="white" stroke-width="2.2"/><line x1="18" y1="6" x2="18" y2="26" stroke="white" stroke-width="2.2"/></svg>';
+  }
+
+  if (cur === 'ETH') {
+    /* Ethereum — dark diamond shape */
+    return '<svg ' + s + '><circle cx="16" cy="16" r="16" fill="#627EEA"/><polygon points="16,6 22,16 16,19.5 10,16" fill="white" opacity="0.9"/><polygon points="16,19.5 22,16 16,26 10,16" fill="white" opacity="0.6"/><polygon points="16,19.5 16,26 10,16" fill="white" opacity="0.4"/></svg>';
+  }
+
+  if (cur === 'EUR') {
+    return '<svg ' + s + '><circle cx="16" cy="16" r="16" fill="#003087"/><text x="16" y="22" text-anchor="middle" fill="#FFD700" font-size="17" font-weight="800" font-family="Arial,sans-serif">€</text></svg>';
+  }
+
+  if (cur === 'GBP') {
+    return '<svg ' + s + '><circle cx="16" cy="16" r="16" fill="#012169"/><text x="16" y="22" text-anchor="middle" fill="white" font-size="16" font-weight="800" font-family="Arial,sans-serif">£</text></svg>';
+  }
+
+  /* Fallback */
+  return '<svg ' + s + '><circle cx="16" cy="16" r="16" fill="#374151"/><text x="16" y="21" text-anchor="middle" fill="white" font-size="13" font-weight="700" font-family="Arial,sans-serif">' + (cur||'?').charAt(0) + '</text></svg>';
+}
 
 function derivHandleLogin() {
   if (derivState.accounts.length > 0) {
@@ -290,29 +332,147 @@ function derivShowTab(tab) {
   derivRenderAccountList();
 }
 
+function derivGetCurrencyName(cur, is_virtual) {
+  if (is_virtual) return 'Demo';
+  const names = { USD:'US Dollar', EUR:'Euro', GBP:'British Pound', AUD:'Australian Dollar', CAD:'Canadian Dollar', BTC:'Bitcoin', ETH:'Ethereum', USDC:'USD Coin', USDT:'Tether TRC20' };
+  return names[cur] || cur;
+}
+
+
+function derivFormatBalance(balance, currency) {
+  if (typeof balance !== 'number') return '—';
+  var crypto = ['BTC','ETH','USDC','USDT'];
+  if (crypto.indexOf(currency) >= 0) return balance.toFixed(8) + ' ' + currency;
+  return balance.toFixed(2) + ' ' + currency;
+}
+
 function derivRenderAccountList() {
-  const list = document.getElementById('deriv-account-list');
+  var list = document.getElementById('deriv-account-list');
   if (!list) return;
-  const filtered = derivState.accounts.filter(a =>
-    derivState.activeTab === 'demo' ? a.is_virtual : !a.is_virtual
-  );
+
+  derivUpdatePanelHeader();
+
+  var filtered = derivState.accounts.filter(function(a) {
+    return derivState.activeTab === 'demo' ? a.is_virtual : !a.is_virtual;
+  });
+
   if (!filtered.length) {
-    list.innerHTML = '<div style="padding:14px;text-align:center;font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);">No ' + derivState.activeTab + ' accounts found</div>';
+    list.innerHTML = '<div style="padding:16px;text-align:center;font-size:0.8rem;color:var(--text-muted);">No ' + derivState.activeTab + ' accounts found</div>';
     return;
   }
-  list.innerHTML = filtered.map(a => {
-    const isActive = a.loginid === derivState.activeLoginid;
-    const flag = derivGetFlag(a.currency);
-    const bal  = typeof a.balance === 'number' ? a.balance.toFixed(2) : '—';
-    return `<div onclick="derivSelectAccount('${a.loginid}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background 0.15s;background:${isActive?'var(--accent-glow)':'transparent'};border-left:3px solid ${isActive?'var(--accent)':'transparent'};">
-      <span style="font-size:1.4rem;flex-shrink:0;">${flag}</span>
-      <div style="flex:1;min-width:0;">
-        <div style="font-family:var(--font-display);font-size:0.85rem;font-weight:700;color:var(--text-primary);">${a.currency}</div>
-        <div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--text-muted);">${a.loginid}</div>
-      </div>
-      <div style="font-family:var(--font-display);font-size:0.9rem;font-weight:800;color:${isActive?'var(--accent)':'var(--text-primary)'};">${bal} ${a.currency}</div>
-    </div>`;
+
+  var sectionLabel = derivState.activeTab === 'demo' ? 'Deriv account' : 'Deriv accounts';
+
+  /* Build HTML safely — no inline event handlers with dynamic values */
+  var html = '<div style="padding:10px 14px 4px;font-size:0.78rem;font-weight:600;color:var(--text-primary);">' + sectionLabel + '</div>';
+
+  filtered.forEach(function(a) {
+    var isActive = a.loginid === derivState.activeLoginid;
+    var icon     = derivGetIcon(a.currency, a.is_virtual);
+    var curName  = derivGetCurrencyName(a.currency, a.is_virtual);
+    var balStr   = derivFormatBalance(a.balance, a.currency);
+    var bg       = isActive ? 'rgba(37,99,235,0.08)' : 'transparent';
+    var fw       = isActive ? '700' : '600';
+
+    var rightSide;
+    if (a.is_virtual) {
+      rightSide = '<button class="deriv-reset-btn" data-loginid="' + a.loginid + '" style="padding:4px 10px;background:transparent;border:1px solid var(--border);border-radius:6px;font-size:0.72rem;color:var(--text-secondary);cursor:pointer;white-space:nowrap;font-family:var(--font-body);transition:all 0.15s;">Reset balance</button>';
+    } else {
+      rightSide = '<div style="font-size:0.82rem;font-weight:700;color:var(--text-primary);white-space:nowrap;">' + balStr + '</div>';
+    }
+
+    html += '<div class="deriv-acc-row" data-loginid="' + a.loginid + '" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background 0.15s;background:' + bg + ';">'
+      + '<div style="width:32px;height:32px;flex-shrink:0;">' + icon + '</div>'
+      + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-size:0.85rem;font-weight:' + fw + ';color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + curName + '</div>'
+        + '<div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-muted);margin-top:1px;">' + a.loginid + '</div>'
+      + '</div>'
+      + rightSide
+      + '</div>';
+  });
+
+  list.innerHTML = html;
+
+  /* Attach click listeners safely after DOM render */
+  list.querySelectorAll('.deriv-acc-row').forEach(function(row) {
+    row.addEventListener('click', function() {
+      derivSelectAccount(row.getAttribute('data-loginid'));
+    });
+  });
+  list.querySelectorAll('.deriv-reset-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      derivResetDemoBalance(btn.getAttribute('data-loginid'));
+    });
+  });
+}
+
+
+/* Update top currency tabs (USD | KSH style) */
+function derivUpdatePanelHeader() {
+  const tabsEl   = document.getElementById('deriv-currency-tabs');
+  const iconEl   = document.getElementById('deriv-panel-active-icon');
+  const balEl    = document.getElementById('deriv-panel-active-bal');
+  if (!tabsEl) return;
+
+  /* Show one tab per real currency */
+  const realAccs = derivState.accounts.filter(function(a) { return !a.is_virtual; });
+  const currencies = [];
+  realAccs.forEach(function(a) {
+    if (!currencies.includes(a.currency)) currencies.push(a.currency);
+  });
+
+  var tabBtns = currencies.map(function(cur) {
+    var isActive = cur === globalAuth.currency && !globalAuth.is_virtual;
+    var bg    = isActive ? 'var(--accent)' : 'var(--bg-input)';
+    var color = isActive ? '#fff' : 'var(--text-muted)';
+    return '<button class="dcur-tab" data-cur="' + cur + '" style="padding:3px 10px;border-radius:6px;font-size:0.75rem;font-weight:700;cursor:pointer;border:none;transition:all 0.15s;background:' + bg + ';color:' + color + ';">' + cur + '</button>';
   }).join('');
+  tabsEl.innerHTML = tabBtns;
+  tabsEl.querySelectorAll('.dcur-tab').forEach(function(btn) {
+    btn.addEventListener('click', function() { derivSwitchCurrency(btn.getAttribute('data-cur')); });
+  });
+
+  /* Active account balance in header */
+  const active = derivState.accounts.find(function(a) { return a.loginid === derivState.activeLoginid; });
+  if (active) {
+    if (iconEl) iconEl.innerHTML = derivGetIcon(active.currency, active.is_virtual);
+    if (balEl)  balEl.textContent = derivFormatBalance(active.balance, active.currency);
+  }
+}
+
+function derivSwitchCurrency(currency) {
+  const account = derivState.accounts.find(function(a) { return a.currency === currency && !a.is_virtual; });
+  if (account) derivSelectAccount(account.loginid);
+}
+
+/* Reset demo balance */
+function derivResetDemoBalance(loginid) {
+  const account = derivState.accounts.find(function(a) { return a.loginid === loginid; });
+  if (!account) return;
+  const ws = new WebSocket(DERIV_WS_URL);
+  ws.onopen = function() {
+    ws.send(JSON.stringify({ authorize: account.token }));
+  };
+  ws.onmessage = function(e) {
+    try {
+      const d = JSON.parse(e.data);
+      if (d.msg_type === 'authorize' && !d.error) {
+        ws.send(JSON.stringify({ topup_virtual: 1 }));
+      }
+      if (d.msg_type === 'topup_virtual') {
+        if (!d.error) {
+          account.balance = parseFloat(d.topup_virtual.new_balance || 10000);
+          derivRenderAccountList();
+          if (typeof accToast === 'function') accToast('Demo balance reset to ' + account.balance.toFixed(2), 'success');
+        } else {
+          if (typeof accToast === 'function') accToast('Reset failed: ' + d.error.message, 'error');
+        }
+        ws.close();
+      }
+    } catch(ex){}
+  };
+  ws.onerror = function() { ws.close(); };
 }
 
 function derivSelectAccount(loginid) {
@@ -339,37 +499,72 @@ function derivSelectAccount(loginid) {
   }
 
   derivRenderAccountList();
+  derivUpdatePanelHeader();
   derivClosePannel();
   if (typeof accToast === 'function') accToast('Switched to ' + loginid + ' · ' + account.currency, 'success');
 }
 
-/* Subscribe to live balance for active account */
-function derivSubscribeBalance(token) {
-  if (derivState.ws) { try { derivState.ws.close(); } catch(e){} derivState.ws = null; }
-  derivState.ws = new WebSocket(DERIV_WS_URL);
-  derivState.ws.onopen = () => derivState.ws.send(JSON.stringify({ authorize: token }));
-  derivState.ws.onmessage = e => {
+/* Live balance WebSocket per account — keyed by loginid */
+var derivBalanceWs = {};
+
+function derivSubscribeBalance(token, loginid, onInit) {
+  /* Close any existing ws for this account */
+  if (derivBalanceWs[loginid]) {
+    try { derivBalanceWs[loginid].close(); } catch(e){}
+    delete derivBalanceWs[loginid];
+  }
+
+  var ws = new WebSocket(DERIV_WS_URL);
+  derivBalanceWs[loginid] = ws;
+  var initFired = false;
+
+  ws.onopen = function() {
+    ws.send(JSON.stringify({ authorize: token }));
+  };
+
+  ws.onmessage = function(e) {
     try {
-      const d = JSON.parse(e.data);
+      var d = JSON.parse(e.data);
+
       if (d.msg_type === 'authorize' && !d.error) {
-        derivState.ws.send(JSON.stringify({ balance: 1, subscribe: 1 }));
+        var initialBal = parseFloat(d.authorize.balance);
+        var currency   = d.authorize.currency;
+
+        /* Fire onInit callback once with initial balance */
+        if (!initFired && typeof onInit === 'function') {
+          initFired = true;
+          onInit(initialBal, currency);
+        }
+
+        /* Subscribe to live balance stream */
+        ws.send(JSON.stringify({ balance: 1, subscribe: 1 }));
+        return;
       }
-      if (d.msg_type === 'balance') {
-        const newBal = parseFloat(d.balance.balance);
-        /* Update in accounts array */
-        const account = derivState.accounts.find(a => a.loginid === derivState.activeLoginid);
+
+      if (d.msg_type === 'balance' && !d.error) {
+        var newBal  = parseFloat(d.balance.balance);
+        var account = derivState.accounts.find(function(a) { return a.loginid === loginid; });
         if (account) account.balance = newBal;
-        /* Update global */
-        if (globalAuth.loginid === derivState.activeLoginid) {
+
+        /* Always update nav button immediately when balance changes */
+        if (globalAuth.loginid === loginid) {
           globalAuth.balance = newBal;
           derivUpdateNavAccountBtn();
         }
-        derivRenderAccountList();
+
+        /* Update dropdown list if it's visible */
+        var panel = document.getElementById('deriv-account-panel');
+        if (panel && panel.style.display !== 'none') {
+          derivRenderAccountList();
+        }
+
+        console.log('[JAHIM] Balance update', loginid, newBal);
       }
-    } catch(ex){}
+    } catch(ex) { console.error('[JAHIM] Balance WS error:', ex); }
   };
-  derivState.ws.onclose = () => {};
-  derivState.ws.onerror = () => { try { derivState.ws.close(); } catch(e){} };
+
+  ws.onclose = function() { delete derivBalanceWs[loginid]; };
+  ws.onerror = function() { try { ws.close(); } catch(ex){} };
 }
 
 /* Parse OAuth tokens from URL after redirect */
@@ -383,7 +578,7 @@ function derivParseOAuthCallback() {
       token:      params.get('token' + i),
       currency:   params.get('cur'   + i) || 'USD',
       balance:    null,
-      is_virtual: (params.get('acct' + i) || '').startsWith('VR'),
+      is_virtual: (params.get('acct' + i) || '').startsWith('VR') || (params.get('acct' + i) || '').startsWith('vr'),
     });
     i++;
   }
@@ -393,39 +588,33 @@ function derivParseOAuthCallback() {
   window.history.replaceState({}, document.title, window.location.pathname);
   derivState.accounts = accounts;
 
-  /* Auto-select first real account */
-  const firstReal = accounts.find(a => !a.is_virtual) || accounts[0];
+  /* Log for debugging */
+  console.log('[JAHIM] OAuth accounts:', accounts.map(function(a){ return a.loginid + ' virtual:' + a.is_virtual; }));
+
+  /* Auto-select first REAL account, fall back to any */
+  var firstReal = accounts.find(function(a) { return !a.is_virtual; });
+  if (!firstReal) firstReal = accounts[0];
   derivState.activeLoginid = firstReal.loginid;
 
   /* Show panel */
-  const panel = document.getElementById('deriv-account-panel');
+  var panel = document.getElementById('deriv-account-panel');
   if (panel) panel.style.display = 'block';
 
-  derivShowTab(firstReal.is_virtual ? 'demo' : 'real');
+  /* Default to Real tab if any real accounts exist, else Demo */
+  var hasReal = accounts.some(function(a) { return !a.is_virtual; });
+  derivShowTab(hasReal ? 'real' : 'demo');
 
-  /* Fetch balances for all accounts in parallel */
-  accounts.forEach(a => {
-    const ws = new WebSocket(DERIV_WS_URL);
-    ws.onopen = () => ws.send(JSON.stringify({ authorize: a.token }));
-    ws.onmessage = e => {
-      try {
-        const d = JSON.parse(e.data);
-        if (d.msg_type === 'authorize' && !d.error) {
-          a.balance = parseFloat(d.authorize.balance);
-          /* Set global token from first real account */
-          if (a.loginid === firstReal.loginid) {
-            globalSetToken(a.token, a.loginid, d.authorize.currency, a.balance, a.is_virtual);
-            a.currency = d.authorize.currency;
-            /* Subscribe to live balance */
-            derivSubscribeBalance(a.token);
-          }
-          derivRenderAccountList();
-          ws.close();
-        }
-        if (d.error) ws.close();
-      } catch(ex){}
-    };
-    ws.onerror = () => ws.close();
+  /* Fetch initial balance + subscribe to live updates for ALL accounts */
+  accounts.forEach(function(a) {
+    derivSubscribeBalance(a.token, a.loginid, function(initialBal, currency) {
+      /* Called once on first authorize */
+      a.balance  = initialBal;
+      a.currency = currency || a.currency;
+      if (a.loginid === firstReal.loginid) {
+        globalSetToken(a.token, a.loginid, a.currency, a.balance, a.is_virtual);
+      }
+      derivRenderAccountList();
+    });
   });
 
   if (typeof accToast === 'function') accToast('Logged in · ' + accounts.length + ' account(s) found', 'success');
