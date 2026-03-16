@@ -1,7 +1,5 @@
 /**
- * hl-analysis.js
- * HL Analysis tab: builds cards, connects Deriv WS,
- * runs AccumEngine, draws sparklines, fires accumulator trades.
+ * hl-analysis.js — Updated with strict 5-rule confluence from accumulators.py
  */
 
 const VOLS = [
@@ -27,14 +25,12 @@ let hlWs = null;
 /* ── Card HTML builder ── */
 function buildHLCard(v) {
   const { sym, name, B } = v;
-  const { META_KEYS, META_LABELS, META_COLORS, META_TIPS, MIN_TICKS } = AccumEngine;
-
   return `
 <div class="vol-card" id="card-${sym}">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:11px;">
     <div>
       <div style="font-family:var(--font-display);font-size:1rem;font-weight:800;color:var(--text-primary);">${name}</div>
-      <div id="regime-${sym}" style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);margin-top:2px;letter-spacing:1px;">Collecting ${MIN_TICKS} ticks…</div>
+      <div id="regime-${sym}" style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);margin-top:2px;letter-spacing:1px;">Collecting data…</div>
     </div>
     <div style="text-align:right;">
       <div id="px-${sym}" style="font-family:var(--font-mono);font-size:1rem;font-weight:800;color:var(--accent);">—</div>
@@ -60,7 +56,7 @@ function buildHLCard(v) {
       <div style="display:flex;gap:10px;font-family:var(--font-mono);font-size:0.62rem;color:var(--text-muted);">
         <span>RSI <b id="rsi-${sym}" style="color:var(--text-secondary);">—</b></span>
         <span>·</span>
-        <span>quiet <b id="streak-${sym}" style="color:var(--text-secondary);">—</b> ticks</span>
+        <span>conf. <b id="streak-${sym}" style="color:var(--text-secondary);">—</b> ticks</span>
       </div>
     </div>
   </div>
@@ -115,7 +111,7 @@ function buildHLCard(v) {
 </div>`;
 }
 
-/* ── Sparkline ── */
+/* ── Sparkline (unchanged) ── */
 function drawSparkline(sym, spark, B) {
   const canvas = document.getElementById('spark-' + sym);
   if (!canvas || !spark || spark.length < 2) return;
@@ -191,7 +187,7 @@ function updateHLCard(sym) {
   if (ring && rscEl) {
     const circ = 194.8;
     ring.style.strokeDashoffset = (circ * (1 - r.survScore / 100)).toFixed(1);
-    const col = r.survScore >= 78 ? '#34d399' : r.survScore >= 62 ? '#fbbf24' : '#f87171';
+    const col = r.survScore >= 100 ? '#34d399' : r.survScore >= 80 ? '#fbbf24' : '#f87171';
     ring.style.stroke = col;
     rscEl.textContent = r.survScore; rscEl.style.color = col;
   }
@@ -202,9 +198,12 @@ function updateHLCard(sym) {
   if (regEl) regEl.textContent = r.regime;
 
   const rsiEl = document.getElementById('rsi-' + sym);
-  if (rsiEl) { rsiEl.textContent = r.rsi ? r.rsi.toFixed(0) : '—'; rsiEl.style.color = r.rsi > 70 ? '#f87171' : r.rsi < 30 ? '#34d399' : 'var(--text-secondary)'; }
+  if (rsiEl) { rsiEl.textContent = r.rsi ? r.rsi : '—'; rsiEl.style.color = r.rsi > 70 ? '#f87171' : r.rsi < 30 ? '#34d399' : 'var(--text-secondary)'; }
   const strEl = document.getElementById('streak-' + sym);
-  if (strEl) { strEl.textContent = r.streak; strEl.style.color = r.streak >= 8 ? '#34d399' : r.streak >= 4 ? '#fbbf24' : '#f87171'; }
+  if (strEl) { 
+    strEl.textContent = s.confirmationStreak; 
+    strEl.style.color = s.confirmationStreak >= 3 ? '#34d399' : s.confirmationStreak >= 1 ? '#fbbf24' : '#f87171';
+  }
 
   drawSparkline(sym, r.spark, r.B);
 
@@ -225,16 +224,15 @@ function updateHLCard(sym) {
   if (spkE) { spkE.textContent = r.worstSpike.toFixed(dp + 1); spkE.style.color = r.worstSpike > r.B * 0.5 ? '#f87171' : r.worstSpike > r.B * 0.25 ? '#fbbf24' : '#34d399'; }
   if (drfE) { drfE.textContent = r.absMu.toFixed(dp + 1); drfE.style.color = r.absMu > r.B * 0.08 ? '#f87171' : '#34d399'; }
 
-  /* Trade button */
+  /* Trade button — now uses new 100-point scale */
   const btn = document.getElementById('tbtn-' + sym);
   if (btn) {
-    const t6 = r.ticks[5].pct;
     btn.disabled = false; btn.style.cursor = 'pointer';
-    if (r.survScore >= 78 && t6 >= 60) {
+    if (r.survScore >= 100) {
       btn.style.background = 'linear-gradient(135deg,#065f46,#059669)';
       btn.style.color = '#fff'; btn.style.borderColor = '#059669';
       btn.textContent = '🚀 ENTER ACCUMULATOR';
-    } else if (r.survScore >= 62) {
+    } else if (r.survScore >= 80) {
       btn.style.background = 'linear-gradient(135deg,#78350f,#d97706)';
       btn.style.color = '#fff'; btn.style.borderColor = '#d97706';
       btn.textContent = '🚀 TRADE ' + sym;
@@ -248,7 +246,7 @@ function updateHLCard(sym) {
 
 window.hlRefreshCard = sym => updateHLCard(sym);
 
-/* ── WebSocket status ── */
+/* ── WebSocket status & connection (unchanged) ── */
 function setHLWsStatus(ok) {
   const dot = document.getElementById('hl-ws-dot');
   const lbl = document.getElementById('hl-ws-label');
@@ -292,7 +290,7 @@ function connectHLWs() {
   hlWs.onerror = () => { try { hlWs.close(); } catch (e) {} };
 }
 
-/* ── Trade button handler ── */
+/* ── Trade button handler (unchanged) ── */
 function startHLTrade(sym) {
   if (!acc.connected) {
     accToast('❌ Connect Accumulator Bot first (API token required)', 'error');
@@ -308,7 +306,7 @@ function startHLTrade(sym) {
   hlPanelShow();
 }
 
-/* ── Init (called once when tab shown) ── */
+/* ── Init ── */
 function initializeGenerator() {
   if (generatorInitialized) return;
   generatorInitialized = true;
@@ -318,7 +316,12 @@ function initializeGenerator() {
 
   VOLS.forEach(v => {
     container.innerHTML += buildHLCard(v);
-    hlStore[v.sym] = { prices: [], barrier: v.B, dp: v.dp };
+    hlStore[v.sym] = { 
+      prices: [], 
+      barrier: v.B, 
+      dp: v.dp,
+      confirmationStreak: 0   // ← new
+    };
   });
 
   connectHLWs();
