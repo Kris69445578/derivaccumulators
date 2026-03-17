@@ -1,6 +1,6 @@
 /**
  * menu.js
- * Injects the Menu tab HTML into the page and registers it.
+ * Injects all tab HTML into the page and registers them.
  * This keeps the main index.html lean — each tab owns its own markup.
  */
 
@@ -25,7 +25,7 @@ function buildMenuTab() {
     </div>
 
     <div class="menu-hero">
-      <div class="menu-hero-badge">🚀 JAHIM TRADER · HL Suite v3.0</div>
+      <div class="menu-hero-badge">🚀 JAHIM TRADER · HL Suite v3.1</div>
       <h1>Welcome to Your<br>D-Traders Suite</h1>
       <p>Your complete toolkit for Deriv volatility trading — signals, accumulator bot, and digit analysis all in one place.</p>
     </div>
@@ -67,9 +67,9 @@ function buildMenuTab() {
     </div>
 
     <div class="menu-info-grid">
-      <div class="menu-info-card"><div class="menu-info-icon">📊</div><div class="menu-info-title">HL Analysis</div><div class="menu-info-text">Multi-indicator signal engine with MACD, RSI, ADX, Bollinger Bands and 6σ survival bar.</div></div>
-      <div class="menu-info-card"><div class="menu-info-icon">🔄</div><div class="menu-info-title">Accumulator Bot</div><div class="menu-info-text">Manual-trigger accumulator with martingale management, daily TP tracking and trade log.</div></div>
-      <div class="menu-info-card"><div class="menu-info-icon">🔢</div><div class="menu-info-title">Digits Analyzer</div><div class="menu-info-text">Live digit frequency tracker across Volatility 10, 25, 50 &amp; 75 — spot over/under patterns.</div></div>
+      <div class="menu-info-card"><div class="menu-info-icon">📊</div><div class="menu-info-title">HL Analysis</div><div class="menu-info-text">Multi-indicator signal engine with 5-rule confluence and 6σ survival bar.</div></div>
+      <div class="menu-info-card"><div class="menu-info-icon">🔄</div><div class="menu-info-title">Accumulator Bot</div><div class="menu-info-text">Manual-trigger accumulator with 10x martingale, auto re-entry on loss, and daily TP tracking.</div></div>
+      <div class="menu-info-card"><div class="menu-info-icon">🔢</div><div class="menu-info-title">Digits Analyzer</div><div class="menu-info-text">Live digit frequency tracker across Volatility indices with built-in trading.</div></div>
       <div class="menu-info-card"><div class="menu-info-icon">💰</div><div class="menu-info-title">Balance Checker</div><div class="menu-info-text">Instantly check your Deriv account balance via secure WebSocket — token never stored.</div></div>
       <div class="menu-info-card"><div class="menu-info-icon">🤖</div><div class="menu-info-title">Higher/Lower Tool</div><div class="menu-info-text">Full-featured Higher/Lower analysis tool with live Deriv market data and trade execution.</div></div>
       <div class="menu-info-card"><div class="menu-info-icon">🌙</div><div class="menu-info-title">Dark &amp; Light Mode</div><div class="menu-info-text">Seamless theme switching — trade comfortably in any lighting condition, any time of day.</div></div>
@@ -78,10 +78,10 @@ function buildMenuTab() {
     <div class="menu-tips-section">
       <div class="menu-tips-title">⚡ Quick Trading Tips</div>
       <div class="tips-grid">
-        <div class="tip-item"><span class="tip-icon">📈</span><div class="tip-text"><strong>Wait for signal confirmation</strong>Only trade when the HL Analysis shows a strong signal (≥75% confidence) with at least 7 confirmations.</div></div>
-        <div class="tip-item"><span class="tip-icon">🛡️</span><div class="tip-text"><strong>Manage your martingale</strong>Never let martingale exceed 3–4 levels. Use the Emergency Stop if consecutive losses hit 3+.</div></div>
+        <div class="tip-item"><span class="tip-icon">📈</span><div class="tip-text"><strong>Wait for signal confirmation</strong>Only trade when the HL Analysis shows a strong signal (ALL 5 rules passed) with at least 5 confirmations.</div></div>
+        <div class="tip-item"><span class="tip-icon">🛡️</span><div class="tip-text"><strong>Manage your martingale</strong>With 10x multiplier, losses grow fast. Use the Emergency Stop if consecutive losses hit 3+.</div></div>
         <div class="tip-item"><span class="tip-icon">🎯</span><div class="tip-text"><strong>Set a daily take profit</strong>Use the Accumulator Bot's daily TP feature. Once hit, stop for the day — protect your gains.</div></div>
-        <div class="tip-item"><span class="tip-icon">📉</span><div class="tip-text"><strong>Watch the 6σ survival bar</strong>A ratio below 1.0 means the price envelope is close to the barrier — consider smaller stakes.</div></div>
+        <div class="tip-item"><span class="tip-icon">🔄</span><div class="tip-text"><strong>Auto re-entry on loss</strong>When AUTO MODE is active, losses automatically trigger re-entry with martingale — watch your stake!</div></div>
         <div class="tip-item"><span class="tip-icon">🕐</span><div class="tip-text"><strong>Use the cooldown period</strong>Allow at least 3 seconds between trades on the same symbol to avoid over-trading noise.</div></div>
         <div class="tip-item"><span class="tip-icon">💡</span><div class="tip-text"><strong>Start with a demo account</strong>Test strategies on a Deriv demo before risking real capital — the signals work on both.</div></div>
       </div>
@@ -100,7 +100,7 @@ function buildGeneratorTab() {
 <div id="generator" class="tab-content">
   <div id="app-hl">
     <header>
-      <span>📈 HL ANALYSIS</span>
+      <span>📈 HL ANALYSIS · 5-RULE CONFLUENCE</span>
       
       <!-- MANUAL / AUTO TRADE BUTTON -->
       <button id="hl-mode-btn" onclick="toggleHLMode()" 
@@ -128,7 +128,7 @@ function buildAccumBotTab() {
           <div class="acc-logo-icon">⬡</div>
           <div class="acc-logo-text">
             <h2>Deriv Accumulator Bot</h2>
-            <p>v3.0 · MANUAL TRIGGER MODE · App ID 129756</p>
+            <p>v3.1 · AUTO RE-ENTRY ON LOSS · 10% TP · 10x MARTINGALE</p>
           </div>
         </div>
         <div class="acc-header-right">
@@ -173,7 +173,7 @@ function buildAccumBotTab() {
                   <div class="acc-field"><label>Growth Rate (%)</label><input type="number" id="acc-cfg-growth" value="5" step="1" min="1" max="5"/></div>
                 </div>
                 <div class="acc-row">
-                  <div class="acc-field"><label>TP per Trade (%)</label><input type="number" id="acc-cfg-tp-trade" value="30" step="1"/></div>
+                  <div class="acc-field"><label>TP per Trade (%)</label><input type="number" id="acc-cfg-tp-trade" value="10" step="1" min="1" max="100"/></div>
                   <div class="acc-field"><label>Daily TP ($)</label><input type="number" id="acc-cfg-daily-tp" value="10" step="1"/></div>
                 </div>
               </div>
@@ -181,10 +181,16 @@ function buildAccumBotTab() {
                 <div class="acc-config-title">Martingale</div>
                 <div class="acc-toggle-row"><span class="acc-toggle-label">Enable Martingale</span><label class="acc-toggle"><input type="checkbox" id="acc-cfg-mart-on" checked/><span class="acc-slider"></span></label></div>
                 <div class="acc-row" style="margin-top:7px;">
-                  <div class="acc-field"><label>Loss Multiplier (×)</label><input type="number" id="acc-cfg-mult" value="3.5" step="0.5" min="1"/></div>
+                  <div class="acc-field"><label>Loss Multiplier (×)</label><input type="number" id="acc-cfg-mult" value="10" step="0.5" min="1"/></div>
                   <div class="acc-field"><label>Max Multiplier (×)</label><input type="number" id="acc-cfg-maxmult" value="50" step="5"/></div>
                 </div>
                 <div class="acc-toggle-row"><span class="acc-toggle-label">Reset After Win</span><label class="acc-toggle"><input type="checkbox" id="acc-cfg-reset-win" checked/><span class="acc-slider"></span></label></div>
+              </div>
+              <div class="acc-config-section" style="background:var(--accent-glow);border-radius:8px;padding:8px;margin-top:10px;">
+                <div class="acc-config-title">🤖 AUTO MODE FEATURE</div>
+                <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);">
+                  When AUTO MODE is active in HL Analysis, losses automatically trigger re-entry with martingale (10x multiplier)
+                </div>
               </div>
             </div>
           </div>
@@ -198,9 +204,14 @@ function buildAccumBotTab() {
           </div>
 
           <div class="acc-panel">
-            <div class="acc-panel-header"><span class="acc-panel-title">MANUAL MODE</span></div>
+            <div class="acc-panel-header"><span class="acc-panel-title">TRADE MODE</span></div>
             <div class="acc-panel-body">
-              <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);">Trades open ONLY when you click TRADE on HL Analysis tab</div>
+              <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);">Trades open when you click TRADE on HL Analysis tab</div>
+              <div style="display:flex;gap:5px;margin-top:8px;">
+                <span class="acc-chip acc-chip-blue">MANUAL</span>
+                <span class="acc-chip acc-chip-green">AUTO RE-ENTRY</span>
+                <span class="acc-chip acc-chip-yellow">10% TP</span>
+              </div>
             </div>
           </div>
         </div>
@@ -269,7 +280,6 @@ function buildAccumBotTab() {
 function buildDigitsTab() {
   return `
 <div id="digits-analyzer" class="tab-content">
-  <!-- your original digits tab content (unchanged) -->
   <div id="digits-app">
     <header>
       <span>🔢 DIGITS ANALYZER + TRADER</span>
