@@ -39,7 +39,7 @@ const RSI_PERIOD = 7;
 const RSI_LOW = 48;
 const RSI_HIGH = 52;
 const MIN_CONFLUENCES = 4; // ALL 5 rules must pass
-const SIGNAL_CONFIRMATIONS = 4; // Ticks in a row that must pass
+const SIGNAL_CONFIRMATIONS = 3; // Ticks in a row that must pass
 
 /* ===== HELPER FUNCTIONS (from Python) ===== */
 function computeEMA(prices, period) {
