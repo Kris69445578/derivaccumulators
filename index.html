@@ -166,6 +166,49 @@
       0%, 80%, 100% { transform: scale(1);   background: #1e2f4a; }
       40%            { transform: scale(1.6); background: #3b82f6; }
     }
+    
+    /* ══════════════════════════════════════
+       DIGITS TOKEN OVERLAY (FIX)
+       ══════════════════════════════════════ */
+    #digit-token-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 5000;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    
+    #digit-token-overlay.show { display: flex; }
+    
+    .digit-token-modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 2rem 2rem 1.8rem;
+      width: 100%;
+      max-width: 400px;
+      margin: 1rem;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+      animation: modalPop 0.28s cubic-bezier(0.34,1.56,0.64,1);
+      position: relative;
+    }
+    
+    .digit-token-modal .modal-hex-icon {
+      width: 52px;
+      height: 52px;
+      background: var(--accent);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin: 0 auto 1.2rem;
+      animation: pulse-hex 2s ease-in-out infinite;
+    }
   </style>
 </head>
 <body class="no-select">
@@ -253,8 +296,29 @@
   <div id="acc-toast-container"></div>
 
   <!-- ══════════════════════════════════════
+       DIGITS TOKEN MODAL (FIXED)
+       ══════════════════════════════════════ -->
+  <div id="digit-token-overlay">
+    <div class="digit-token-modal">
+      <div class="modal-hex-icon">🔢</div>
+      <div class="modal-title">Connect Digits Trader</div>
+      <div class="modal-sub">Enter your API token to enable digit trading.</div>
+      <div class="modal-input-wrap">
+        <label>Deriv API Token</label>
+        <input type="password" id="digit-trade-token" class="modal-token-input" placeholder="Paste your API token here…" autocomplete="off"/>
+        <button class="modal-eye-btn" onclick="var i=document.getElementById('digit-trade-token');i.type=i.type==='password'?'text':'password';" title="Show/hide">👁</button>
+      </div>
+      <div class="modal-error" id="digit-modal-error"></div>
+      <button class="modal-connect-btn" onclick="digitConnectTrading()">🔗 Connect</button>
+      <button class="modal-skip-btn" onclick="digitCloseModal()">Cancel</button>
+      <div class="modal-link-row">
+        <a href="https://legacy-api.deriv.com/dashboard/" target="_blank" rel="noopener">Get your API token →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
        DERIV ACCOUNT DROPDOWN PANEL
-       Matches Deriv UI exactly
        ══════════════════════════════════════ -->
   <div id="deriv-account-panel" style="
     display:none;position:fixed;top:60px;right:12px;width:320px;
