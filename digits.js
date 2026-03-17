@@ -1,7 +1,8 @@
 /**
- * digits.js — v4.0
+ * digits.js — v4.1
  * Digits Analyzer + Trader with Martingale
  * Contract types: DIGITMATCH, DIGITDIFF, DIGITOVER, DIGITUNDER, DIGITEVEN, DIGITODD
+ * FIXED: Initialization and connection issues
  */
 
 /* ── Constants ── */
@@ -46,6 +47,8 @@ function initializeDigitsAnalyzer() {
   if (digitsAnalyzerInitialized) return;
   digitsAnalyzerInitialized = true;
 
+  console.log('[DIGITS] Initializing...');
+
   /* clock */
   function updateTime() {
     var el = document.getElementById('digits-current-time');
@@ -63,7 +66,12 @@ function initializeDigitsAnalyzer() {
   /* ── Build cards ── */
   function buildDCards() {
     var c = document.getElementById('digits-cards-container');
-    if (!c) return;
+    if (!c) {
+      console.error('[DIGITS] Container not found');
+      return;
+    }
+
+    c.innerHTML = ''; // Clear any existing content
 
     DIGIT_VOLS.forEach(function(v) {
       var card = document.createElement('div');
@@ -210,6 +218,8 @@ function initializeDigitsAnalyzer() {
         },
       };
     });
+    
+    console.log('[DIGITS] Cards built:', Object.keys(dStore).length);
   }
 
   /* ── Render digit frequencies ── */
@@ -255,22 +265,39 @@ function initializeDigitsAnalyzer() {
 
   /* ── Data WebSocket (ticks feed) ── */
   function connectDWs() {
-    if (dWs) { dWs.onclose = null; dWs.onerror = null; try { dWs.close(); } catch (e) {} dWs = null; }
+    if (dWs) { 
+      try { dWs.close(); } catch (e) {} 
+      dWs = null; 
+    }
+    
+    console.log('[DIGITS] Connecting WebSocket...');
     dWs = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=129756');
+    
     dWs.onopen = function() {
+      console.log('[DIGITS] WebSocket connected, requesting history...');
       DIGIT_VOLS.forEach(function(v, i) {
         setTimeout(function() {
-          if (dWs && dWs.readyState === WebSocket.OPEN)
-            dWs.send(JSON.stringify({ ticks_history: v.symbol, count: DIGIT_HIST, end: 'latest', style: 'ticks', subscribe: 1 }));
+          if (dWs && dWs.readyState === WebSocket.OPEN) {
+            dWs.send(JSON.stringify({ 
+              ticks_history: v.symbol, 
+              count: DIGIT_HIST, 
+              end: 'latest', 
+              style: 'ticks', 
+              subscribe: 1 
+            }));
+            console.log('[DIGITS] Requested history for', v.symbol);
+          }
         }, i * 160);
       });
     };
+    
     dWs.onmessage = function(e) {
       try {
         var d = JSON.parse(e.data);
         if (d.msg_type === 'history' && d.history && d.history.prices) {
           var sym   = d.echo_req && d.echo_req.ticks_history;
-          var store = dStore[sym]; if (!sym || !store) return;
+          var store = dStore[sym]; 
+          if (!sym || !store) return;
           store.prices = d.history.prices.map(function(p) { return parseFloat(p); }).slice(-DIGIT_HIST);
           var last = store.prices[store.prices.length - 1];
           store.currentDigit = getDigit(last);
@@ -280,7 +307,8 @@ function initializeDigitsAnalyzer() {
         }
         if (d.msg_type === 'tick') {
           var sym2  = d.tick.symbol;
-          var store2= dStore[sym2]; if (!store2) return;
+          var store2= dStore[sym2]; 
+          if (!store2) return;
           var price = parseFloat(d.tick.quote);
           store2.prices.push(price);
           if (store2.prices.length > DIGIT_HIST) store2.prices.shift();
@@ -288,14 +316,35 @@ function initializeDigitsAnalyzer() {
           if (store2.ui.price) store2.ui.price.textContent = price.toFixed(5);
           renderDigits(sym2);
         }
-      } catch (ex) {}
+      } catch (ex) {
+        console.error('[DIGITS] Message error:', ex);
+      }
     };
-    dWs.onclose = function() { setTimeout(connectDWs, 3000); };
-    dWs.onerror = function() { try { dWs.close(); } catch (e) {} };
+    
+    dWs.onclose = function() { 
+      console.log('[DIGITS] WebSocket closed, reconnecting...');
+      setTimeout(connectDWs, 3000); 
+    };
+    
+    dWs.onerror = function(err) { 
+      console.error('[DIGITS] WebSocket error:', err);
+      try { dWs.close(); } catch (e) {} 
+    };
   }
 
   buildDCards();
   connectDWs();
+  
+  /* Auto-connect if global token exists */
+  if (typeof globalAuth !== 'undefined' && globalAuth.connected && globalAuth.token) {
+    setTimeout(() => {
+      var inp = document.getElementById('digit-trade-token');
+      if (inp) inp.value = globalAuth.token;
+      if (!digitTrade.authorized && typeof digitConnectTrading === 'function') {
+        digitConnectTrading();
+      }
+    }, 1000);
+  }
 }
 
 /* ════════════════════════════════════════════
