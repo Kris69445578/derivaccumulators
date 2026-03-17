@@ -1,10 +1,8 @@
 /**
- * accumulator-engine.js — REPLACED WITH accumulators.py 5-RULE CONFLUENCE LOGIC
- * Strict entry only when ALL 5 rules pass + 3 consecutive ticks confirmation.
+ * accumulator-engine.js — STRICT 5-RULE CONFLUENCE (from your Python file)
  */
 
 const AccumEngine = (() => {
-  /* ── Math helpers (kept for 6-tick survival grid) ── */
   function erf(x) {
     const t = 1 / (1 + 0.3275911 * Math.abs(x));
     const p = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
@@ -13,7 +11,6 @@ const AccumEngine = (() => {
   }
   function Phi(z) { return 0.5 * (1 + erf(z / Math.SQRT2)); }
 
-  /* ── Python-ported 5 strict rules ── */
   function computeEMA(prices, period) {
     if (prices.length < period) return null;
     let ema = prices[prices.length - period];
@@ -96,9 +93,9 @@ const AccumEngine = (() => {
       ruleNoRun(prices)
     ].filter(Boolean).length;
 
-    const survScore = Math.round(passedRules * 20); // 100 = all 5 rules
+    const survScore = Math.round(passedRules * 20);
 
-    /* Keep 6-tick survival grid + stats for UI */
+    /* Keep 6-tick grid + stats for UI */
     const n = prices.length;
     const all_d = [];
     for (let i = 1; i < n; i++) all_d.push(prices[i] - prices[i - 1]);
@@ -155,7 +152,7 @@ const AccumEngine = (() => {
       B: barrier,
       ticks,
       spark: prices.slice(-40),
-      passedRules   // ← used for confirmation streak
+      passedRules
     };
   }
 
