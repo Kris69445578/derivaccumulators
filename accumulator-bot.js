@@ -2,7 +2,7 @@
  * accumulator-bot.js
  * Deriv Accumulator Bot — WebSocket trading, martingale, daily P&L.
  * Manual-trigger mode only: trades fire from HL Analysis TRADE button.
- * UPDATED: TP default 10%, Martingale default 10x, Auto re-entry on loss (IMMEDIATE)
+ * UPDATED: TP default 10%, Martingale default 10x, Auto re-entry on loss (IMMEDIATE - 100ms)
  */
 
 const ACC_SYMBOLS  = ["1HZ10V","1HZ15V","1HZ30V","1HZ50V","1HZ25V","1HZ75V","1HZ90V","1HZ100V","R_10","R_25","R_50","R_75","R_100"];
@@ -244,22 +244,26 @@ function accOnMessage(evt) {
       accIncreaseMartingale();
       accLog(`✗ LOSS ${sym}: $${profit.toFixed(2)} | Mart → ×${acc.martingale_mult.toFixed(2)}`, 'error');
       
-      // AUTO RE-ENTRY ON LOSS - Immediate execution (no cooldown)
-      // Check if auto mode is active by looking for hlAutoMode in global scope
+      // AUTO RE-ENTRY ON LOSS - IMMEDIATE (100ms delay)
+      // Check if auto mode is active
       const autoModeActive = typeof window.hlAutoMode !== 'undefined' ? window.hlAutoMode : false;
       
       if (autoModeActive && !acc.trading_paused) {
-        accLog(`🔄 AUTO RE-ENTRY triggered for ${sym} with martingale ×${acc.martingale_mult.toFixed(2)}`, 'info');
+        accLog(`🔄 AUTO RE-ENTRY IMMEDIATE for ${sym} with martingale ×${acc.martingale_mult.toFixed(2)}`, 'info');
         
-        // Schedule re-entry after a very short delay (just to ensure contract is fully settled)
+        // Mark for auto re-entry
+        acc.pending_auto_retry[sym] = true;
+        
+        // Schedule re-entry after minimal delay (100ms)
         setTimeout(() => {
-          if (!acc.open_trades.has(sym) && !acc.trading_paused && acc.connected) {
+          if (!acc.open_trades.has(sym) && !acc.trading_paused && acc.connected && acc.pending_auto_retry[sym]) {
             // Directly call send proposal to bypass cooldown
             const cfg = accGetCfg();
             accLog(`🚀 AUTO RE-ENTRY EXECUTING ${sym} | Stake $${accGetCurrentStake(cfg).toFixed(2)} | ×${acc.martingale_mult.toFixed(2)}`, 'trade');
             accSendProposal(sym, cfg);
+            delete acc.pending_auto_retry[sym];
           }
-        }, 300); // 300ms delay for immediate but safe re-entry
+        }, 100); // 100ms delay for truly immediate re-entry
       }
     }
 
@@ -269,7 +273,7 @@ function accOnMessage(evt) {
 
     // Only set last_trade_time for manual trades, not auto re-entries
     const autoModeActive = typeof window.hlAutoMode !== 'undefined' ? window.hlAutoMode : false;
-    if (!autoModeActive) {
+    if (!autoModeActive || win) {
       acc.last_trade_time[sym] = Date.now();
     }
     
@@ -698,5 +702,5 @@ function initAccumBot() {
   setInterval(accCheckNewDay, 10000);
   window.addEventListener('resize', accDrawChart);
   accLog('✅ MANUAL MODE active — trades only from HL Analysis buttons', 'info');
-  accLog('✅ TP per trade: 10% | Martingale: 10x | Auto re-entry ON (300ms delay)', 'info');
+  accLog('✅ TP per trade: 10% | Martingale: 10x | Auto re-entry: IMMEDIATE (100ms)', 'info');
 }
