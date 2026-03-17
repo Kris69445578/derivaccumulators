@@ -1,8 +1,8 @@
 /**
- * digits.js — v4.1
+ * digits.js — v4.2
  * Digits Analyzer + Trader with Martingale
  * Contract types: DIGITMATCH, DIGITDIFF, DIGITOVER, DIGITUNDER, DIGITEVEN, DIGITODD
- * FIXED: Initialization and connection issues
+ * FIXED: Connection issues - Now properly connects with global token
  */
 
 /* ── Constants ── */
@@ -38,6 +38,7 @@ const digitTrade = {
   openContracts: {},
   pending:       {},
   req_id:        0,
+  reconnectTimer: null,
 };
 
 /* ════════════════════════════════════════════
@@ -335,29 +336,41 @@ function initializeDigitsAnalyzer() {
   buildDCards();
   connectDWs();
   
-  /* Auto-connect if global token exists */
-  if (typeof globalAuth !== 'undefined' && globalAuth.connected && globalAuth.token) {
-    setTimeout(() => {
+  // Auto-connect trading if global token exists
+  setTimeout(() => {
+    if (typeof globalAuth !== 'undefined' && globalAuth.connected && globalAuth.token) {
+      console.log('[DIGITS] Global token found, auto-connecting trading...');
       var inp = document.getElementById('digit-trade-token');
-      if (inp) inp.value = globalAuth.token;
-      if (!digitTrade.authorized && typeof digitConnectTrading === 'function') {
-        digitConnectTrading();
+      if (inp) {
+        inp.value = globalAuth.token;
+        // Auto-connect trading
+        if (typeof digitConnectTrading === 'function') {
+          digitConnectTrading();
+        }
       }
-    }, 1000);
-  }
+    }
+  }, 2000);
 }
 
 /* ════════════════════════════════════════════
-   DIGIT TOKEN MODAL
+   DIGIT TOKEN MODAL - FIXED
    ════════════════════════════════════════════ */
 function digitOpenModal() {
-  /* If global token already set — connect silently, no modal */
+  console.log('[DIGITS] Opening token modal');
+  
+  // If global token already set — connect silently, no modal
   if (typeof globalAuth !== 'undefined' && globalAuth.connected && globalAuth.token) {
+    console.log('[DIGITS] Using global token');
     var inp = document.getElementById('digit-trade-token');
-    if (inp) inp.value = globalAuth.token;
-    if (!digitTrade.authorized && typeof digitConnectTrading === 'function') digitConnectTrading();
+    if (inp) {
+      inp.value = globalAuth.token;
+      if (!digitTrade.authorized && typeof digitConnectTrading === 'function') {
+        digitConnectTrading();
+      }
+    }
     return;
   }
+  
   var overlay = document.getElementById('digit-token-overlay');
   if (overlay) {
     overlay.style.display = 'flex';
@@ -375,43 +388,67 @@ function digitCloseModal() {
   if (err) err.textContent = '';
 }
 
+// Close modal when clicking outside
 document.addEventListener('click', function(e) {
   var overlay = document.getElementById('digit-token-overlay');
   if (overlay && e.target === overlay) digitCloseModal();
 });
 
 /* ════════════════════════════════════════════
-   TRADING WebSocket
+   TRADING WebSocket - FIXED
    ════════════════════════════════════════════ */
 function digitConnectTrading() {
+  console.log('[DIGITS] Connecting trading WebSocket...');
+  
   var tokenInput = document.getElementById('digit-trade-token');
   var errEl      = document.getElementById('digit-modal-error');
+  
   if (!tokenInput || !tokenInput.value.trim()) {
     if (errEl) errEl.textContent = 'Please enter your API token';
     digitToast('Enter your API token first', 'error');
     return;
   }
+  
   var token = tokenInput.value.trim();
   digitTrade.token = token;
-  if (digitTrade.ws) { try { digitTrade.ws.close(); } catch (e) {} digitTrade.ws = null; }
+  
+  // Close existing connection
+  if (digitTrade.ws) { 
+    try { digitTrade.ws.close(); } catch (e) {} 
+    digitTrade.ws = null; 
+  }
+  
   digitTrade.authorized = false;
 
   var connBtn = document.getElementById('digit-conn-btn');
-  if (connBtn) { connBtn.textContent = '⏳ Connecting…'; connBtn.disabled = true; }
+  if (connBtn) { 
+    connBtn.textContent = '⏳ Connecting…'; 
+    connBtn.disabled = true; 
+  }
 
   digitTrade.ws = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=129756');
 
   digitTrade.ws.onopen = function() {
+    console.log('[DIGITS] Trading WS open, authorizing...');
     digitTrade.ws.send(JSON.stringify({ authorize: token }));
   };
+  
   digitTrade.ws.onmessage = function(e) {
-    try { digitHandleMessage(JSON.parse(e.data)); } catch (ex) {}
+    try { 
+      digitHandleMessage(JSON.parse(e.data)); 
+    } catch (ex) {
+      console.error('[DIGITS] Message parse error:', ex);
+    }
   };
+  
   digitTrade.ws.onclose = function() {
+    console.log('[DIGITS] Trading WS closed');
     digitTrade.authorized = false;
     digitUpdateConnectStatus(false);
   };
-  digitTrade.ws.onerror = function() {
+  
+  digitTrade.ws.onerror = function(err) {
+    console.error('[DIGITS] Trading WS error:', err);
     try { digitTrade.ws.close(); } catch (e) {}
     digitTrade.authorized = false;
     digitUpdateConnectStatus(false);
@@ -419,20 +456,25 @@ function digitConnectTrading() {
 }
 
 function digitHandleMessage(d) {
+  console.log('[DIGITS] Received:', d.msg_type);
 
   /* ── Authorize ── */
   if (d.msg_type === 'authorize') {
     var errEl  = document.getElementById('digit-modal-error');
     var connBtn= document.getElementById('digit-conn-btn');
     if (connBtn) { connBtn.disabled = false; }
+    
     if (!d.error) {
       digitTrade.authorized = true;
       digitTrade.balance    = parseFloat(d.authorize.balance);
       digitTrade.currency   = d.authorize.currency;
       digitUpdateConnectStatus(true);
-      digitToast('Connected · Balance: ' + digitTrade.balance.toFixed(2) + ' ' + digitTrade.currency, 'success');
+      digitToast('✅ Connected · Balance: ' + digitTrade.balance.toFixed(2) + ' ' + digitTrade.currency, 'success');
       digitCloseModal();
+      
+      // Subscribe to balance updates
       digitTrade.ws.send(JSON.stringify({ balance: 1, subscribe: 1 }));
+      
       /* Promote to global token if not already set */
       if (typeof globalAuth !== 'undefined' && !globalAuth.connected) {
         var tInp = document.getElementById('digit-trade-token');
@@ -440,14 +482,20 @@ function digitHandleMessage(d) {
         if (tok && typeof globalSetToken === 'function') {
           globalSetToken(tok, d.authorize.loginid, d.authorize.currency, digitTrade.balance, d.authorize.is_virtual);
           if (typeof derivState !== 'undefined') {
-            derivState.accounts = [{ loginid: d.authorize.loginid, token: tok, currency: d.authorize.currency, balance: digitTrade.balance, is_virtual: d.authorize.is_virtual }];
+            derivState.accounts = [{ 
+              loginid: d.authorize.loginid, 
+              token: tok, 
+              currency: d.authorize.currency, 
+              balance: digitTrade.balance, 
+              is_virtual: d.authorize.is_virtual 
+            }];
             derivState.activeLoginid = d.authorize.loginid;
           }
         }
       }
     } else {
       if (errEl) errEl.textContent = 'Auth failed: ' + d.error.message;
-      digitToast('Auth failed: ' + d.error.message, 'error');
+      digitToast('❌ Auth failed: ' + d.error.message, 'error');
       digitUpdateConnectStatus(false);
     }
     return;
@@ -466,18 +514,22 @@ function digitHandleMessage(d) {
     var intent = digitTrade.pending[d.req_id];
     if (!intent) return;
     delete digitTrade.pending[d.req_id];
+    
     if (d.error) {
       digitToast('Trade error: ' + d.error.message, 'error');
       digitSetTradeBtn(intent.sym, false);
       return;
     }
+    
     var cid = d.buy.contract_id;
     digitTrade.openContracts[cid] = Object.assign({}, intent, { openTime: Date.now() });
+    
     var activeEl    = document.getElementById('dactive-' + intent.sym);
     var activeLabel = document.getElementById('dactive-label-' + intent.sym);
     if (activeEl)    activeEl.style.display = 'block';
     if (activeLabel) activeLabel.textContent = intent.ct + ' · $' + intent.stake.toFixed(2) + ' · ' + intent.duration + 'T';
-    digitToast('Opened: ' + intent.ct + ' on ' + intent.sym, 'success');
+    
+    digitToast('✅ Opened: ' + intent.ct + ' on ' + intent.sym, 'success');
     digitTrade.ws.send(JSON.stringify({ proposal_open_contract: 1, contract_id: cid, subscribe: 1 }));
     return;
   }
@@ -495,6 +547,7 @@ function digitHandleMessage(d) {
       pnlEl.textContent = (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2);
       pnlEl.style.color = profit >= 0 ? '#34d399' : '#f87171';
     }
+    
     if (!poc.is_sold) return;
 
     /* settled */
@@ -520,6 +573,7 @@ function digitHandleMessage(d) {
       resEl.textContent      = (win ? '✅ WIN' : '❌ LOSS') + '  ·  ' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2);
       setTimeout(function() { if (resEl) resEl.style.display = 'none'; }, 4000);
     }
+    
     digitSetTradeBtn(info.sym, false);
     digitToast((win ? '✅ WIN' : '❌ LOSS') + ' ' + info.sym + ': ' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2), win ? 'success' : 'error');
     return;
@@ -734,13 +788,18 @@ function digitUpdateConnectStatus(connected) {
   var hlbl = document.getElementById('digit-conn-label-header');
   var hbtn = document.getElementById('digit-header-btn');
   var balTxt = connected ? digitTrade.balance.toFixed(2) + ' ' + digitTrade.currency : '';
+  
   if (dot)  dot.style.background  = connected ? '#34d399' : '#f87171';
   if (lbl)  lbl.textContent       = connected ? 'CONNECTED' : 'DISCONNECTED';
   if (btn)  { btn.textContent = connected ? '🔌 Disconnect' : '🔗 Connect & Start Trading'; btn.disabled = false; }
   if (bal)  bal.textContent       = balTxt;
   if (hdot) hdot.style.background = connected ? '#34d399' : '#f87171';
   if (hlbl) hlbl.textContent      = connected ? balTxt : 'NOT CONNECTED';
-  if (hbtn) { hbtn.textContent = connected ? '✅ CONNECTED' : '🔗 CONNECT'; hbtn.style.background = connected ? '#059669' : 'var(--accent)'; }
+  if (hbtn) { 
+    hbtn.textContent = connected ? '✅ CONNECTED' : '🔗 CONNECT'; 
+    hbtn.style.background = connected ? '#059669' : 'var(--accent)'; 
+    hbtn.disabled = false;
+  }
 }
 
 function digitToast(msg, type) {
@@ -751,3 +810,12 @@ function digitToast(msg, type) {
   var c = document.getElementById('acc-toast-container');
   if (c) { c.appendChild(el); setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 4200); }
 }
+
+// Make functions globally accessible
+window.digitOpenModal = digitOpenModal;
+window.digitCloseModal = digitCloseModal;
+window.digitConnectTrading = digitConnectTrading;
+window.digitPlaceTrade = digitPlaceTrade;
+window.digitSetContractType = digitSetContractType;
+window.digitSelectForTrade = digitSelectForTrade;
+window.digitToggleMart = digitToggleMart;
