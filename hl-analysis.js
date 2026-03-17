@@ -1,6 +1,7 @@
 /**
- * hl-analysis.js — FULL WORKING VERSION WITH MANUAL / AUTO MODE
- * Auto trades when ALL 5 rules pass + 3 confirmation ticks
+ * hl-analysis.js — STRICT 5-RULE CONFLUENCE ENGINE
+ * Based on Python Accumulator Bot v3.1
+ * Auto trades when ALL 5 rules pass + confirmation ticks
  */
 
 const VOLS = [
@@ -22,9 +23,143 @@ const VOLS = [
 let generatorInitialized = false;
 const hlStore = {};
 let hlWs = null;
-let hlAutoMode = false;   // ← AUTO MODE FLAG
+let hlAutoMode = false;
 
-/* ── Card HTML builder ── */
+/* ===== RULE CONSTANTS (from Python) ===== */
+const EMA_FAST_PERIOD = 20;
+const EMA_SLOW_PERIOD = 50;
+const EMA_MIN_SEPARATION = 0.0008;
+const VOLATILITY_LOOKBACK = 40;
+const VOLATILITY_HIGH_MULT = 1.3;
+const SPIKE_LOOKBACK = 10;
+const SPIKE_FACTOR = 1.2;
+const EMA_PULLBACK_PERIOD = 20;
+const EMA_PULLBACK_TOLERANCE = 0.0004;
+const RSI_PERIOD = 14;
+const RSI_LOW = 45;
+const RSI_HIGH = 55;
+const MIN_CONFLUENCES = 5; // ALL 5 rules must pass
+const SIGNAL_CONFIRMATIONS = 1; // Ticks in a row that must pass
+
+/* ===== HELPER FUNCTIONS (from Python) ===== */
+function computeEMA(prices, period) {
+  if (prices.length < period) return null;
+  const k = 2 / (period + 1);
+  let ema = prices[prices.length - period];
+  for (let i = prices.length - period + 1; i < prices.length; i++) {
+    ema = prices[i] * k + ema * (1 - k);
+  }
+  return ema;
+}
+
+function computeRSI(prices, period = RSI_PERIOD) {
+  if (prices.length < period + 1) return null;
+  const diffs = [];
+  for (let i = prices.length - period - 1; i < prices.length - 1; i++) {
+    diffs.push(prices[i + 1] - prices[i]);
+  }
+  const gains = diffs.map(d => Math.max(d, 0));
+  const losses = diffs.map(d => Math.max(-d, 0));
+  const avgG = gains.reduce((a, b) => a + b, 0) / period;
+  const avgL = losses.reduce((a, b) => a + b, 0) / period;
+  const rs = avgG / (avgL + 1e-9);
+  return 100 - (100 / (1 + rs));
+}
+
+/* ===== RULE 1: Trend Confirmation ===== */
+function ruleTrendConfirmed(prices) {
+  const emaFast = computeEMA(prices, EMA_FAST_PERIOD);
+  const emaSlow = computeEMA(prices, EMA_SLOW_PERIOD);
+  if (!emaFast || !emaSlow) return null;
+  
+  const separation = Math.abs(emaFast - emaSlow) / (emaSlow + 1e-9);
+  if (separation < EMA_MIN_SEPARATION) return null;
+  
+  return emaFast > emaSlow ? "UP" : "DOWN";
+}
+
+/* ===== RULE 2: Low Volatility ===== */
+function ruleLowVolatility(prices) {
+  if (prices.length < VOLATILITY_LOOKBACK + 1) return false;
+  
+  const diffs = [];
+  for (let i = prices.length - VOLATILITY_LOOKBACK; i < prices.length; i++) {
+    diffs.push(Math.abs(prices[i] - prices[i - 1]));
+  }
+  const avgMove = diffs.reduce((a, b) => a + b, 0) / diffs.length || 0;
+  if (avgMove < 1e-10) return true;
+  
+  const lastMove = Math.abs(prices[prices.length - 1] - prices[prices.length - 2]);
+  if (lastMove > SPIKE_FACTOR * avgMove) return false;
+  
+  const recent = prices.slice(-VOLATILITY_LOOKBACK);
+  const priceRange = Math.max(...recent) - Math.min(...recent);
+  if (priceRange > VOLATILITY_HIGH_MULT * avgMove * VOLATILITY_LOOKBACK) return false;
+  
+  return true;
+}
+
+/* ===== RULE 3: Pullback to EMA ===== */
+function rulePullbackToEMA(prices) {
+  const ema = computeEMA(prices, EMA_PULLBACK_PERIOD);
+  if (!ema || ema < 1e-9) return false;
+  
+  const price = prices[prices.length - 1];
+  const distancePct = Math.abs(price - ema) / ema;
+  return distancePct <= EMA_PULLBACK_TOLERANCE;
+}
+
+/* ===== RULE 4: RSI Neutral ===== */
+function ruleRSINeutral(prices) {
+  const rsi = computeRSI(prices);
+  if (!rsi) return false;
+  return rsi > RSI_LOW && rsi < RSI_HIGH;
+}
+
+/* ===== RULE 5: No Momentum Run ===== */
+function ruleNoMomentumRun(prices) {
+  if (prices.length < 9) return false;
+  
+  const diffs = [];
+  for (let i = prices.length - 8; i < prices.length; i++) {
+    diffs.push(Math.sign(prices[i] - prices[i - 1]));
+  }
+  
+  const upCount = diffs.filter(d => d > 0).length;
+  const downCount = diffs.filter(d => d < 0).length;
+  
+  return upCount < 7 && downCount < 7;
+}
+
+/* ===== MASTER ENTRY GATE ===== */
+function passesEntryFilters(sym, prices) {
+  if (prices.length < EMA_SLOW_PERIOD + 10) return { passed: false, rules: {} };
+  
+  const trend = ruleTrendConfirmed(prices);
+  const lowVol = ruleLowVolatility(prices);
+  const pullback = rulePullbackToEMA(prices);
+  const rsiOk = ruleRSINeutral(prices);
+  const noRun = ruleNoMomentumRun(prices);
+  
+  const rules = {
+    Trend: trend !== null,
+    LowVol: lowVol,
+    Pullback: pullback,
+    RSI: rsiOk,
+    NoRun: noRun
+  };
+  
+  const passed = Object.values(rules).filter(Boolean).length;
+  
+  return {
+    passed: passed >= MIN_CONFLUENCES,
+    passedCount: passed,
+    rules,
+    trend
+  };
+}
+
+/* ===== CARD HTML (unchanged) ===== */
 function buildHLCard(v) {
   const { sym, name, B } = v;
   return `
@@ -50,7 +185,7 @@ function buildHLCard(v) {
       </svg>
       <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
         <div id="rscore-${sym}" style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:var(--text-muted);line-height:1.1;">—</div>
-        <div style="font-family:var(--font-mono);font-size:0.45rem;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;">score</div>
+        <div style="font-family:var(--font-mono);font-size:0.45rem;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;">rules</div>
       </div>
     </div>
     <div style="flex:1;min-width:0;">
@@ -61,6 +196,15 @@ function buildHLCard(v) {
         <span>conf. <b id="streak-${sym}" style="color:var(--text-secondary);">—</b> ticks</span>
       </div>
     </div>
+  </div>
+
+  <!-- Rule indicators -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-bottom:10px;">
+    <div id="rule-trend-${sym}" class="rule-chip" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:3px;text-align:center;font-size:0.6rem;font-family:var(--font-mono);">📈 Trend</div>
+    <div id="rule-vol-${sym}" class="rule-chip" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:3px;text-align:center;font-size:0.6rem;font-family:var(--font-mono);">🌊 LowVol</div>
+    <div id="rule-pull-${sym}" class="rule-chip" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:3px;text-align:center;font-size:0.6rem;font-family:var(--font-mono);">🎯 Pullback</div>
+    <div id="rule-rsi-${sym}" class="rule-chip" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:3px;text-align:center;font-size:0.6rem;font-family:var(--font-mono);">⚖️ RSI</div>
+    <div id="rule-run-${sym}" class="rule-chip" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:3px;text-align:center;font-size:0.6rem;font-family:var(--font-mono);">🏃 NoRun</div>
   </div>
 
   <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:8px;margin-bottom:10px;">
@@ -113,7 +257,7 @@ function buildHLCard(v) {
 </div>`;
 }
 
-/* ── Sparkline (unchanged) ── */
+/* ===== SPARKLINE (unchanged) ===== */
 function drawSparkline(sym, spark, B) {
   const canvas = document.getElementById('spark-' + sym);
   if (!canvas || !spark || spark.length < 2) return;
@@ -163,7 +307,7 @@ function drawSparkline(sym, spark, B) {
   ctx.fillStyle = isDark ? '#60a5fa' : '#2563eb'; ctx.fill();
 }
 
-/* ── Card updater with AUTO trading ── */
+/* ===== CARD UPDATER with NEW RULES ===== */
 function updateHLCard(sym) {
   const s = hlStore[sym];
   if (!s) return;
@@ -173,108 +317,166 @@ function updateHLCard(sym) {
   if (pxEl && n > 0) pxEl.textContent = s.prices[n - 1].toFixed(s.dp || 3);
 
   const tcEl = document.getElementById('stat-ticks-' + sym);
-  if (tcEl) tcEl.textContent = n < AccumEngine.MIN_TICKS ? n + '/' + AccumEngine.MIN_TICKS : n;
+  if (tcEl) tcEl.textContent = n < 60 ? n + '/60' : n;
 
-  const r = AccumEngine.calc(sym, s.prices, s.barrier);
-  if (!r) {
+  const result = passesEntryFilters(sym, s.prices);
+  
+  if (n < 60) {
     const reg = document.getElementById('regime-' + sym);
-    if (reg) reg.textContent = 'Collecting ' + n + '/' + AccumEngine.MIN_TICKS + ' ticks…';
+    if (reg) reg.textContent = 'Collecting ' + n + '/60 ticks…';
     return;
   }
 
+  /* Update rule chips */
+  const ruleTrend = document.getElementById('rule-trend-' + sym);
+  const ruleVol = document.getElementById('rule-vol-' + sym);
+  const rulePull = document.getElementById('rule-pull-' + sym);
+  const ruleRsi = document.getElementById('rule-rsi-' + sym);
+  const ruleRun = document.getElementById('rule-run-' + sym);
+
+  if (ruleTrend) {
+    ruleTrend.style.background = result.rules.Trend ? 'rgba(52,211,153,0.15)' : 'var(--bg-elevated)';
+    ruleTrend.style.borderColor = result.rules.Trend ? '#34d399' : 'var(--border)';
+    ruleTrend.style.color = result.rules.Trend ? '#34d399' : 'var(--text-muted)';
+  }
+  if (ruleVol) {
+    ruleVol.style.background = result.rules.LowVol ? 'rgba(52,211,153,0.15)' : 'var(--bg-elevated)';
+    ruleVol.style.borderColor = result.rules.LowVol ? '#34d399' : 'var(--border)';
+    ruleVol.style.color = result.rules.LowVol ? '#34d399' : 'var(--text-muted)';
+  }
+  if (rulePull) {
+    rulePull.style.background = result.rules.Pullback ? 'rgba(52,211,153,0.15)' : 'var(--bg-elevated)';
+    rulePull.style.borderColor = result.rules.Pullback ? '#34d399' : 'var(--border)';
+    rulePull.style.color = result.rules.Pullback ? '#34d399' : 'var(--text-muted)';
+  }
+  if (ruleRsi) {
+    ruleRsi.style.background = result.rules.RSI ? 'rgba(52,211,153,0.15)' : 'var(--bg-elevated)';
+    ruleRsi.style.borderColor = result.rules.RSI ? '#34d399' : 'var(--border)';
+    ruleRsi.style.color = result.rules.RSI ? '#34d399' : 'var(--text-muted)';
+  }
+  if (ruleRun) {
+    ruleRun.style.background = result.rules.NoRun ? 'rgba(52,211,153,0.15)' : 'var(--bg-elevated)';
+    ruleRun.style.borderColor = result.rules.NoRun ? '#34d399' : 'var(--border)';
+    ruleRun.style.color = result.rules.NoRun ? '#34d399' : 'var(--text-muted)';
+  }
+
   /* AUTO TRADE LOGIC */
-  if (hlAutoMode && r.survScore >= 100 && s.confirmationStreak >= 3 && !acc.open_trades.has(sym)) {
+  if (hlAutoMode && result.passed && s.confirmationStreak >= SIGNAL_CONFIRMATIONS && !acc.open_trades.has(sym)) {
     startHLTrade(sym);
     s.confirmationStreak = 0;
   }
 
   /* Update confirmation streak */
-  s.confirmationStreak = (r.passedRules === 5) ? (s.confirmationStreak + 1) : 0;
+  s.confirmationStreak = result.passed ? (s.confirmationStreak + 1) : 0;
   const strEl = document.getElementById('streak-' + sym);
   if (strEl) {
     strEl.textContent = s.confirmationStreak;
-    strEl.style.color = s.confirmationStreak >= 3 ? '#34d399' : '#fbbf24';
+    strEl.style.color = s.confirmationStreak >= SIGNAL_CONFIRMATIONS ? '#34d399' : '#fbbf24';
   }
 
-  /* Ring progress */
+  /* Ring progress (rules passed count) */
   const ring = document.getElementById('ring-' + sym);
   const rscEl = document.getElementById('rscore-' + sym);
   if (ring && rscEl) {
     const circ = 194.8;
-    ring.style.strokeDashoffset = (circ * (1 - r.survScore / 100)).toFixed(1);
-    const col = r.survScore >= 100 ? '#34d399' : r.survScore >= 80 ? '#fbbf24' : '#f87171';
+    ring.style.strokeDashoffset = (circ * (1 - result.passedCount / 5)).toFixed(1);
+    const col = result.passedCount === 5 ? '#34d399' : result.passedCount >= 4 ? '#fbbf24' : '#f87171';
     ring.style.stroke = col;
-    rscEl.textContent = r.survScore;
+    rscEl.textContent = result.passedCount + '/5';
     rscEl.style.color = col;
   }
 
+  /* Verdict */
   const vEl = document.getElementById('verdict-' + sym);
   if (vEl) {
-    vEl.textContent = r.verdict;
-    vEl.className = 'signal-area ' + r.vClass;
+    if (result.passedCount === 5) {
+      vEl.textContent = '⚡ ENTRY READY — ALL 5 RULES PASSED';
+      vEl.className = 'signal-area signal-very-strong';
+    } else if (result.passedCount >= 4) {
+      vEl.textContent = '⏳ ' + result.passedCount + '/5 RULES — WAIT';
+      vEl.className = 'signal-area signal-building';
+    } else {
+      vEl.textContent = '🚫 AVOID — ' + result.passedCount + '/5 RULES';
+      vEl.className = 'signal-area signal-lower';
+    }
   }
 
+  /* Regime based on trend */
   const regEl = document.getElementById('regime-' + sym);
-  if (regEl) regEl.textContent = r.regime;
+  if (regEl) {
+    if (result.trend === 'UP') regEl.textContent = '📈 UPTREND — BUY SIGNALS';
+    else if (result.trend === 'DOWN') regEl.textContent = '📉 DOWNTREND — SELL SIGNALS';
+    else regEl.textContent = '🟡 RANGING — MONITOR';
+  }
 
   const rsiEl = document.getElementById('rsi-' + sym);
   if (rsiEl) {
-    rsiEl.textContent = r.rsi || '—';
+    const rsi = computeRSI(s.prices);
+    rsiEl.textContent = rsi ? Math.round(rsi) : '—';
   }
 
-  drawSparkline(sym, r.spark, r.B);
+  /* Survival probability (simplified) */
+  const sigma = s.prices.length > 30 ? 
+    Math.sqrt(s.prices.slice(-30).reduce((acc, p, i, arr) => {
+      if (i === 0) return acc;
+      const diff = Math.abs(p - arr[i-1]);
+      return acc + diff * diff;
+    }, 0) / 30) : 0.1;
+    
+  const barrier = s.barrier;
+  const ticks = [];
+  for (let t = 1; t <= 6; t++) {
+    const prob = Math.max(0, Math.min(100, Math.round(100 * Math.exp(-t * sigma / (barrier + 1e-9)))));
+    const tier = prob >= 70 ? 'safe' : prob >= 45 ? 'risky' : 'danger';
+    ticks.push({ t, prob, tier });
+  }
 
-  /* 6-tick grid */
-  r.ticks.forEach(tk => {
+  ticks.forEach(tk => {
     const el = document.getElementById('td-' + sym + '-' + tk.t);
     if (el) {
       const col = tk.tier === 'safe' ? '#34d399' : tk.tier === 'risky' ? '#fbbf24' : '#f87171';
-      el.style.background = tk.tier === 'safe' ? 'rgba(52,211,153,0.15)' : tk.tier === 'risky' ? 'rgba(251,191,36,0.15)' : 'rgba(248,113,113,0.15)';
+      el.style.background = tk.tier === 'safe' ? 'rgba(52,211,153,0.15)' : 
+                           tk.tier === 'risky' ? 'rgba(251,191,36,0.15)' : 
+                           'rgba(248,113,113,0.15)';
       el.style.color = col;
-      el.textContent = tk.pct + '%';
+      el.style.borderColor = col;
+      el.textContent = tk.prob + '%';
     }
   });
 
-  /* Stats */
-  const dp = s.dp || 3;
-  const sigE = document.getElementById('stat-sigma-' + sym);
-  const spkE = document.getElementById('stat-spike-' + sym);
-  const drfE = document.getElementById('stat-drift-' + sym);
-  if (sigE) sigE.textContent = r.sigma.toFixed(dp + 1);
-  if (spkE) spkE.textContent = r.worstSpike.toFixed(dp + 1);
-  if (drfE) drfE.textContent = r.absMu.toFixed(dp + 1);
+  drawSparkline(sym, s.prices.slice(-40), barrier);
 
-  /* Button */
+  /* Button styling */
   const btn = document.getElementById('tbtn-' + sym);
   if (btn) {
-    if (r.survScore >= 100) {
+    if (result.passedCount === 5) {
       btn.style.background = 'linear-gradient(135deg,#065f46,#059669)';
-      btn.textContent = hlAutoMode ? 'AUTO TRADING...' : '🚀 ENTER ACCUMULATOR';
-    } else if (r.survScore >= 80) {
+      btn.style.borderColor = '#34d399';
+    } else if (result.passedCount >= 4) {
       btn.style.background = 'linear-gradient(135deg,#78350f,#d97706)';
-      btn.textContent = '🚀 TRADE ' + sym;
+      btn.style.borderColor = '#fbbf24';
     } else {
       btn.style.background = 'linear-gradient(135deg,#7f1d1d,#dc2626)';
-      btn.textContent = '🚀 TRADE ' + sym;
+      btn.style.borderColor = '#f87171';
     }
   }
 }
 
 window.hlRefreshCard = sym => updateHLCard(sym);
 
-/* ── Toggle AUTO mode ── */
+/* ===== AUTO MODE TOGGLE ===== */
 window.toggleHLMode = function() {
   hlAutoMode = !hlAutoMode;
   const btn = document.getElementById('hl-mode-btn');
   if (btn) {
-    btn.textContent = hlAutoMode ? "AUTO MODE ON" : "MANUAL MODE";
+    btn.textContent = hlAutoMode ? "🤖 AUTO MODE ON" : "👤 MANUAL MODE";
     btn.style.background = hlAutoMode ? "#10b981" : "var(--bg-elevated)";
     btn.style.color = hlAutoMode ? "#fff" : "var(--accent)";
   }
-  accToast(hlAutoMode ? "🚀 AUTO TRADING ENABLED" : "Manual mode active", hlAutoMode ? "success" : "info");
+  accToast(hlAutoMode ? "🤖 AUTO TRADING ENABLED" : "👤 Manual mode active", hlAutoMode ? "success" : "info");
 };
 
-/* ── WebSocket (unchanged) ── */
+/* ===== WEBSOCKET (unchanged) ===== */
 function setHLWsStatus(ok) {
   const dot = document.getElementById('hl-ws-dot');
   const lbl = document.getElementById('hl-ws-label');
@@ -317,7 +519,7 @@ function connectHLWs() {
   hlWs.onclose = () => { setHLWsStatus(false); setTimeout(connectHLWs, 3000); };
 }
 
-/* ── Trade handler (unchanged) ── */
+/* ===== TRADE HANDLER (unchanged) ===== */
 function startHLTrade(sym) {
   if (!acc.connected) {
     accToast('❌ Connect Accumulator Bot first', 'error');
@@ -333,7 +535,7 @@ function startHLTrade(sym) {
   hlPanelShow();
 }
 
-/* ── Init ── */
+/* ===== INIT ===== */
 function initializeGenerator() {
   if (generatorInitialized) return;
   generatorInitialized = true;
@@ -343,7 +545,12 @@ function initializeGenerator() {
 
   VOLS.forEach(v => {
     container.innerHTML += buildHLCard(v);
-    hlStore[v.sym] = { prices: [], barrier: v.B, dp: v.dp, confirmationStreak: 0 };
+    hlStore[v.sym] = { 
+      prices: [], 
+      barrier: v.B, 
+      dp: v.dp, 
+      confirmationStreak: 0 
+    };
   });
 
   connectHLWs();
