@@ -2,6 +2,7 @@
  * accumulator-bot.js
  * Deriv Accumulator Bot — WebSocket trading, martingale, daily P&L.
  * Manual-trigger mode only: trades fire from HL Analysis TRADE button.
+ * UPDATED: TP default 10%, Martingale default 10x, Auto re-entry on loss
  */
 
 const ACC_SYMBOLS  = ["1HZ10V","1HZ15V","1HZ30V","1HZ50V","1HZ25V","1HZ75V","1HZ90V","1HZ100V","R_10","R_25","R_50","R_75","R_100"];
@@ -33,6 +34,7 @@ const acc = {
   tick_prices: {},
   tick_dirs: {},
   last_trade_time: {},
+  pending_auto_retry: {}, // Track symbols waiting for auto re-entry
 };
 
 /* ── Fast poll timers ── */
@@ -45,10 +47,10 @@ function accGetCfg() {
     currency:    document.getElementById('acc-cfg-currency').value,
     base_stake:  parseFloat(document.getElementById('acc-cfg-stake').value) || 1.0,
     growth_rate: (parseFloat(document.getElementById('acc-cfg-growth').value) || 5) / 100,
-    tp_trade:    (parseFloat(document.getElementById('acc-cfg-tp-trade').value) || 10) / 100,
+    tp_trade:    (parseFloat(document.getElementById('acc-cfg-tp-trade').value) || 10) / 100, // Default 10%
     daily_tp:    parseFloat(document.getElementById('acc-cfg-daily-tp').value) || 10,
     mart_enabled:document.getElementById('acc-cfg-mart-on').checked,
-    mart_mult:   parseFloat(document.getElementById('acc-cfg-mult').value) || 11,
+    mart_mult:   parseFloat(document.getElementById('acc-cfg-mult').value) || 10, // Default 10x
     mart_max:    parseFloat(document.getElementById('acc-cfg-maxmult').value) || 50,
     reset_win:   document.getElementById('acc-cfg-reset-win').checked,
     cooldown_ms: (parseFloat(document.getElementById('acc-cfg-cooldown').value) || 3) * 1000,
@@ -91,6 +93,7 @@ function accDisconnect() {
   acc.connected = false;
   acc.open_trades.clear();
   acc.pending = {};
+  acc.pending_auto_retry = {};
   acc.contracts_info = {};
   acc.contracts_map  = {};
   accSetStatus('offline');
@@ -240,6 +243,17 @@ function accOnMessage(evt) {
       acc.losses++;
       accIncreaseMartingale();
       accLog(`✗ LOSS ${sym}: $${profit.toFixed(2)} | Mart → ×${acc.martingale_mult.toFixed(2)}`, 'error');
+      
+      // AUTO RE-ENTRY ON LOSS when auto mode is active
+      if (typeof hlAutoMode !== 'undefined' && hlAutoMode && !acc.trading_paused) {
+        accLog(`🔄 AUTO RE-ENTRY triggered for ${sym} with martingale ×${acc.martingale_mult.toFixed(2)}`, 'info');
+        // Schedule re-entry after a short delay
+        setTimeout(() => {
+          if (!acc.open_trades.has(sym) && !acc.trading_paused && acc.connected) {
+            accManualOpenTrade(sym);
+          }
+        }, 800);
+      }
     }
 
     acc.trades.unshift({ time: new Date().toLocaleTimeString(), sym, profit, stake, mult: acc.martingale_mult, win });
@@ -292,7 +306,7 @@ function accManualOpenTrade(sym) {
     accToast(`Cooldown active for ${sym} — wait ${Math.ceil((cfg.cooldown_ms - (now - last)) / 1000)}s`, 'warning');
     return;
   }
-  accLog(`🚀 MANUAL TRADE TRIGGER ${sym} | Stake $${accGetCurrentStake(cfg).toFixed(2)} | ×${acc.martingale_mult.toFixed(2)}`, 'trade');
+  accLog(`🚀 ${typeof hlAutoMode !== 'undefined' && hlAutoMode ? 'AUTO' : 'MANUAL'} TRADE TRIGGER ${sym} | Stake $${accGetCurrentStake(cfg).toFixed(2)} | ×${acc.martingale_mult.toFixed(2)}`, 'trade');
   accSendProposal(sym, cfg);
 }
 
@@ -300,10 +314,14 @@ function accSendProposal(sym, cfg) {
   const stake = accGetCurrentStake(cfg);
   const reqId = ++acc.req_counter;
   acc.pending[reqId] = { sym, stake };
+  
+  // Calculate take profit amount based on stake percentage
+  const tpAmount = stake * cfg.tp_trade;
+  
   accWsSend({
     proposal: 1, amount: stake, basis: 'stake', contract_type: 'ACCU',
     currency: cfg.currency, growth_rate: cfg.growth_rate, symbol: sym,
-    limit_order: { take_profit: parseFloat((stake * cfg.tp_trade).toFixed(2)) },
+    limit_order: { take_profit: parseFloat(tpAmount.toFixed(2)) },
     req_id: reqId,
   });
 }
@@ -629,6 +647,16 @@ let accBotInit = false;
 function initAccumBot() {
   if (accBotInit) return;
   accBotInit = true;
+  
+  // Set default values for inputs
+  setTimeout(() => {
+    const tpTrade = document.getElementById('acc-cfg-tp-trade');
+    if (tpTrade) tpTrade.value = '10'; // Default 10%
+    
+    const martMult = document.getElementById('acc-cfg-mult');
+    if (martMult) martMult.value = '10'; // Default 10x
+  }, 100);
+  
   accBuildSymbolCards();
   accDrawChart();
   accUpdateUI();
@@ -636,4 +664,5 @@ function initAccumBot() {
   setInterval(accCheckNewDay, 10000);
   window.addEventListener('resize', accDrawChart);
   accLog('✅ MANUAL MODE active — trades only from HL Analysis buttons', 'info');
+  accLog('✅ TP per trade: 10% | Martingale: 10x | Auto re-entry ON', 'info');
 }
