@@ -2,7 +2,7 @@
  * accumulator-bot.js
  * Deriv Accumulator Bot — WebSocket trading, martingale, daily P&L.
  * Manual-trigger mode only: trades fire from HL Analysis TRADE button.
- * UPDATED: TP default 10%, Martingale default 10x, Auto re-entry on loss
+ * UPDATED: TP default 10%, Martingale default 10x, Auto re-entry on loss (IMMEDIATE)
  */
 
 const ACC_SYMBOLS  = ["1HZ10V","1HZ15V","1HZ30V","1HZ50V","1HZ25V","1HZ75V","1HZ90V","1HZ100V","R_10","R_25","R_50","R_75","R_100"];
@@ -244,15 +244,22 @@ function accOnMessage(evt) {
       accIncreaseMartingale();
       accLog(`✗ LOSS ${sym}: $${profit.toFixed(2)} | Mart → ×${acc.martingale_mult.toFixed(2)}`, 'error');
       
-      // AUTO RE-ENTRY ON LOSS when auto mode is active
-      if (typeof hlAutoMode !== 'undefined' && hlAutoMode && !acc.trading_paused) {
+      // AUTO RE-ENTRY ON LOSS - Immediate execution (no cooldown)
+      // Check if auto mode is active by looking for hlAutoMode in global scope
+      const autoModeActive = typeof window.hlAutoMode !== 'undefined' ? window.hlAutoMode : false;
+      
+      if (autoModeActive && !acc.trading_paused) {
         accLog(`🔄 AUTO RE-ENTRY triggered for ${sym} with martingale ×${acc.martingale_mult.toFixed(2)}`, 'info');
-        // Schedule re-entry after a short delay
+        
+        // Schedule re-entry after a very short delay (just to ensure contract is fully settled)
         setTimeout(() => {
           if (!acc.open_trades.has(sym) && !acc.trading_paused && acc.connected) {
-            accManualOpenTrade(sym);
+            // Directly call send proposal to bypass cooldown
+            const cfg = accGetCfg();
+            accLog(`🚀 AUTO RE-ENTRY EXECUTING ${sym} | Stake $${accGetCurrentStake(cfg).toFixed(2)} | ×${acc.martingale_mult.toFixed(2)}`, 'trade');
+            accSendProposal(sym, cfg);
           }
-        }, 800);
+        }, 300); // 300ms delay for immediate but safe re-entry
       }
     }
 
@@ -260,7 +267,12 @@ function accOnMessage(evt) {
     acc.pnl_history.push(acc.daily_profit);
     if (acc.pnl_history.length > 80) acc.pnl_history.shift();
 
-    acc.last_trade_time[sym] = Date.now();
+    // Only set last_trade_time for manual trades, not auto re-entries
+    const autoModeActive = typeof window.hlAutoMode !== 'undefined' ? window.hlAutoMode : false;
+    if (!autoModeActive) {
+      acc.last_trade_time[sym] = Date.now();
+    }
+    
     acc.open_trades.delete(sym);
     delete acc.contracts_info[cid];
     delete acc.contracts_map[sym];
@@ -269,7 +281,12 @@ function accOnMessage(evt) {
     accRenderTradeLog();
     accDrawChart();
     accUpdateUI();
-    hlPanelAddResult(sym, profit, win);
+    
+    // Call hlPanelAddResult if it exists
+    if (typeof window.hlPanelAddResult === 'function') {
+      window.hlPanelAddResult(sym, profit, win);
+    }
+    
     accToast(`${win ? '✓ WIN' : '✗ LOSS'} ${sym}: ${profit >= 0 ? '+' : ''}$${profit.toFixed(2)}`, win ? 'success' : 'error');
 
     const cfg = accGetCfg();
@@ -296,17 +313,26 @@ function accStopFastPoll(cid) {
 }
 
 /* ── Trade actions ── */
-function accManualOpenTrade(sym) {
+function accManualOpenTrade(sym, isAutoReEntry = false) {
   if (!acc.active_symbols.has(sym)) return;
-  if (acc.open_trades.has(sym)) { accToast(`${sym} already has an open position`, 'warning'); return; }
-  const cfg = accGetCfg();
-  const now = Date.now();
-  const last= acc.last_trade_time[sym] || 0;
-  if ((now - last) < cfg.cooldown_ms) {
-    accToast(`Cooldown active for ${sym} — wait ${Math.ceil((cfg.cooldown_ms - (now - last)) / 1000)}s`, 'warning');
-    return;
+  if (acc.open_trades.has(sym)) { 
+    accToast(`${sym} already has an open position`, 'warning'); 
+    return; 
   }
-  accLog(`🚀 ${typeof hlAutoMode !== 'undefined' && hlAutoMode ? 'AUTO' : 'MANUAL'} TRADE TRIGGER ${sym} | Stake $${accGetCurrentStake(cfg).toFixed(2)} | ×${acc.martingale_mult.toFixed(2)}`, 'trade');
+  
+  const cfg = accGetCfg();
+  
+  // Skip cooldown check for auto re-entry
+  if (!isAutoReEntry) {
+    const now = Date.now();
+    const last= acc.last_trade_time[sym] || 0;
+    if ((now - last) < cfg.cooldown_ms) {
+      accToast(`Cooldown active for ${sym} — wait ${Math.ceil((cfg.cooldown_ms - (now - last)) / 1000)}s`, 'warning');
+      return;
+    }
+  }
+  
+  accLog(`🚀 ${isAutoReEntry ? 'AUTO RE-ENTRY' : 'MANUAL'} TRADE ${sym} | Stake $${accGetCurrentStake(cfg).toFixed(2)} | ×${acc.martingale_mult.toFixed(2)}`, 'trade');
   accSendProposal(sym, cfg);
 }
 
@@ -500,7 +526,9 @@ function accRenderActiveTrades() {
       return `<div class="acc-active-card" id="acc-active-${cid}"><div class="acc-spin"></div><div><div class="acc-active-sym">${sym}</div><div class="acc-active-meta">Stake: $${(info.stake || 0).toFixed(2)} · ACCU · GR ${(accGetCfg().growth_rate * 100).toFixed(0)}%</div></div><div style="flex:1"></div><div class="acc-active-pnl" id="acc-pnl-${cid}">+$0.00</div></div>`;
     }).join('');
   }
-  hlPanelRender();
+  if (typeof window.hlPanelRender === 'function') {
+    window.hlPanelRender();
+  }
 }
 
 function accUpdateActiveTradeUI(cid, profit) {
@@ -655,6 +683,12 @@ function initAccumBot() {
     
     const martMult = document.getElementById('acc-cfg-mult');
     if (martMult) martMult.value = '10'; // Default 10x
+    
+    // Add auto mode indicator
+    const statusChip = document.getElementById('acc-trading-status-chip');
+    if (statusChip) {
+      statusChip.innerHTML = '<span class="acc-chip acc-chip-blue">WAITING</span>';
+    }
   }, 100);
   
   accBuildSymbolCards();
@@ -664,5 +698,5 @@ function initAccumBot() {
   setInterval(accCheckNewDay, 10000);
   window.addEventListener('resize', accDrawChart);
   accLog('✅ MANUAL MODE active — trades only from HL Analysis buttons', 'info');
-  accLog('✅ TP per trade: 10% | Martingale: 10x | Auto re-entry ON', 'info');
+  accLog('✅ TP per trade: 10% | Martingale: 10x | Auto re-entry ON (300ms delay)', 'info');
 }
