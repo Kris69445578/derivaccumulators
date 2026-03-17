@@ -100,7 +100,14 @@ function buildGeneratorTab() {
 <div id="generator" class="tab-content">
   <div id="app-hl">
     <header>
-      <span>📈 MLS ANALYSIS</span>
+      <span>📈 HL ANALYSIS</span>
+      
+      <!-- MANUAL / AUTO TRADE BUTTON -->
+      <button id="hl-mode-btn" onclick="toggleHLMode()" 
+        style="font-family:var(--font-mono);font-size:0.75rem;font-weight:700;padding:6px 14px;border-radius:8px;border:1px solid var(--accent);background:var(--bg-elevated);color:var(--accent);cursor:pointer;transition:all 0.2s;">
+        MANUAL MODE
+      </button>
+
       <span id="hl-status-bar" style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);display:flex;align-items:center;gap:8px;">
         <span id="hl-ws-dot" style="width:7px;height:7px;border-radius:50%;background:#374151;display:inline-block;"></span>
         <span id="hl-ws-label">Connecting…</span>
@@ -262,46 +269,7 @@ function buildAccumBotTab() {
 function buildDigitsTab() {
   return `
 <div id="digits-analyzer" class="tab-content">
-
-  <!-- DIGIT TRADING TOKEN MODAL -->
-  <div id="digit-token-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:6000;align-items:center;justify-content:center;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:24px;padding:2rem 2rem 1.8rem;width:100%;max-width:400px;margin:1rem;box-shadow:0 30px 60px rgba(0,0,0,0.5);animation:modalPop 0.28s cubic-bezier(0.34,1.56,0.64,1);position:relative;">
-
-      <div style="width:52px;height:52px;background:var(--accent);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 1.2rem;animation:pulse-hex 2s ease-in-out infinite;">🔢</div>
-
-      <div style="font-family:var(--font-display);font-size:1.25rem;font-weight:700;color:var(--text-primary);text-align:center;margin-bottom:0.4rem;">Connect to Trade Digits</div>
-      <div style="font-size:0.82rem;color:var(--text-secondary);text-align:center;margin-bottom:1.4rem;line-height:1.5;">Enter your Deriv API token to place real digit trades — Match, Differ, Over, Under, Even &amp; Odd.</div>
-
-      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:1rem;">
-        <div id="digit-conn-dot" style="width:8px;height:8px;border-radius:50%;background:#f87171;transition:background 0.3s;flex-shrink:0;"></div>
-        <span id="digit-conn-label" style="font-family:var(--font-mono);font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);">DISCONNECTED</span>
-        <span id="digit-balance-display" style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--accent);margin-left:8px;"></span>
-      </div>
-
-      <div style="position:relative;margin-bottom:0.8rem;">
-        <label style="display:block;font-family:var(--font-mono);font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:6px;">Deriv API Token</label>
-        <input type="password" id="digit-trade-token" placeholder="Paste your API token here…" autocomplete="off"
-          onkeydown="if(event.key==='Enter')digitConnectTrading()"
-          style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:0.8rem 2.8rem 0.8rem 1rem;color:var(--text-primary);font-family:var(--font-mono);font-size:0.85rem;outline:none;transition:border-color 0.2s,box-shadow 0.2s;box-sizing:border-box;"/>
-        <button onclick="var i=document.getElementById('digit-trade-token');i.type=i.type==='password'?'text':'password';" style="position:absolute;right:10px;bottom:10px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;padding:2px 4px;">👁</button>
-      </div>
-
-      <div id="digit-modal-error" style="font-size:0.75rem;color:#f87171;font-family:var(--font-mono);text-align:center;margin-bottom:0.5rem;min-height:1rem;"></div>
-
-      <button id="digit-conn-btn" onclick="digitConnectTrading()" style="width:100%;background:var(--accent);border:none;color:#fff;font-family:var(--font-display);font-size:1rem;font-weight:700;padding:0.85rem;border-radius:12px;cursor:pointer;transition:opacity 0.2s,transform 0.15s;letter-spacing:0.5px;margin-top:0.2rem;">
-        🔗 Connect &amp; Start Trading
-      </button>
-
-      <button onclick="digitCloseModal()" style="width:100%;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-family:var(--font-mono);font-size:0.75rem;font-weight:600;padding:0.6rem;border-radius:10px;cursor:pointer;margin-top:0.55rem;letter-spacing:0.8px;text-transform:uppercase;transition:all 0.2s;">
-        Skip — Browse Without Trading
-      </button>
-
-      <div style="text-align:center;margin-top:1rem;font-size:0.75rem;color:var(--text-muted);font-family:var(--font-mono);">
-        Don't have a token? <a href="https://legacy-api.deriv.com/dashboard/" target="_blank" rel="noopener" style="color:var(--accent-text);text-decoration:none;border-bottom:1px dotted var(--accent-text);">Get your API token →</a>
-      </div>
-    </div>
-  </div>
-
+  <!-- your original digits tab content (unchanged) -->
   <div id="digits-app">
     <header>
       <span>🔢 DIGITS ANALYZER + TRADER</span>
