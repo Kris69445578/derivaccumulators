@@ -1,5 +1,6 @@
 /**
- * hl-analysis.js — Updated with strict 5-rule confluence from accumulators.py
+ * hl-analysis.js — FULL WORKING VERSION WITH MANUAL / AUTO MODE
+ * Auto trades when ALL 5 rules pass + 3 confirmation ticks
  */
 
 const VOLS = [
@@ -21,6 +22,7 @@ const VOLS = [
 let generatorInitialized = false;
 const hlStore = {};
 let hlWs = null;
+let hlAutoMode = false;   // ← AUTO MODE FLAG
 
 /* ── Card HTML builder ── */
 function buildHLCard(v) {
@@ -116,7 +118,7 @@ function drawSparkline(sym, spark, B) {
   const canvas = document.getElementById('spark-' + sym);
   if (!canvas || !spark || spark.length < 2) return;
   const W = canvas.offsetWidth || 260, H = 52;
-  canvas.width  = W * (window.devicePixelRatio || 1);
+  canvas.width = W * (window.devicePixelRatio || 1);
   canvas.height = H * (window.devicePixelRatio || 1);
   const ctx = canvas.getContext('2d');
   ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
@@ -126,10 +128,10 @@ function drawSparkline(sym, spark, B) {
   const mid = spark[spark.length - 1];
   const hi = mid + B, lo = mid - B;
   const pMin = Math.min(...spark, lo), pMax = Math.max(...spark, hi);
-  const rng  = pMax - pMin || 1;
-  const pad  = 4;
-  const toX  = i => pad + (i / (spark.length - 1)) * (W - 2 * pad);
-  const toY  = v => H - pad - (v - pMin) / rng * (H - 2 * pad);
+  const rng = pMax - pMin || 1;
+  const pad = 4;
+  const toX = i => pad + (i / (spark.length - 1)) * (W - 2 * pad);
+  const toY = v => H - pad - (v - pMin) / rng * (H - 2 * pad);
 
   ctx.fillStyle = isDark ? 'rgba(248,113,113,0.08)' : 'rgba(220,38,38,0.06)';
   ctx.fillRect(0, 0, W, toY(hi));
@@ -161,16 +163,15 @@ function drawSparkline(sym, spark, B) {
   ctx.fillStyle = isDark ? '#60a5fa' : '#2563eb'; ctx.fill();
 }
 
-/* ── Card updater ── */
+/* ── Card updater with AUTO trading ── */
 function updateHLCard(sym) {
   const s = hlStore[sym];
   if (!s) return;
-  const bInp = document.getElementById('b-' + sym);
-  if (bInp) s.barrier = parseFloat(bInp.value) || s.barrier;
-  const n = s.prices.length;
 
+  const n = s.prices.length;
   const pxEl = document.getElementById('px-' + sym);
   if (pxEl && n > 0) pxEl.textContent = s.prices[n - 1].toFixed(s.dp || 3);
+
   const tcEl = document.getElementById('stat-ticks-' + sym);
   if (tcEl) tcEl.textContent = n < AccumEngine.MIN_TICKS ? n + '/' + AccumEngine.MIN_TICKS : n;
 
@@ -181,64 +182,79 @@ function updateHLCard(sym) {
     return;
   }
 
+  /* AUTO TRADE LOGIC */
+  if (hlAutoMode && r.survScore >= 100 && s.confirmationStreak >= 3 && !acc.open_trades.has(sym)) {
+    startHLTrade(sym);
+    s.confirmationStreak = 0;
+  }
+
+  /* Update confirmation streak */
+  s.confirmationStreak = (r.passedRules === 5) ? (s.confirmationStreak + 1) : 0;
+  const strEl = document.getElementById('streak-' + sym);
+  if (strEl) {
+    strEl.textContent = s.confirmationStreak;
+    strEl.style.color = s.confirmationStreak >= 3 ? '#34d399' : '#fbbf24';
+  }
+
   /* Ring progress */
-  const ring   = document.getElementById('ring-' + sym);
-  const rscEl  = document.getElementById('rscore-' + sym);
+  const ring = document.getElementById('ring-' + sym);
+  const rscEl = document.getElementById('rscore-' + sym);
   if (ring && rscEl) {
     const circ = 194.8;
     ring.style.strokeDashoffset = (circ * (1 - r.survScore / 100)).toFixed(1);
     const col = r.survScore >= 100 ? '#34d399' : r.survScore >= 80 ? '#fbbf24' : '#f87171';
     ring.style.stroke = col;
-    rscEl.textContent = r.survScore; rscEl.style.color = col;
+    rscEl.textContent = r.survScore;
+    rscEl.style.color = col;
   }
 
-  const vEl   = document.getElementById('verdict-' + sym);
-  if (vEl)  { vEl.textContent = r.verdict; vEl.className = 'signal-area ' + r.vClass; vEl.style.margin = '0 0 7px'; }
+  const vEl = document.getElementById('verdict-' + sym);
+  if (vEl) {
+    vEl.textContent = r.verdict;
+    vEl.className = 'signal-area ' + r.vClass;
+  }
+
   const regEl = document.getElementById('regime-' + sym);
   if (regEl) regEl.textContent = r.regime;
 
   const rsiEl = document.getElementById('rsi-' + sym);
-  if (rsiEl) { rsiEl.textContent = r.rsi ? r.rsi : '—'; rsiEl.style.color = r.rsi > 70 ? '#f87171' : r.rsi < 30 ? '#34d399' : 'var(--text-secondary)'; }
-  const strEl = document.getElementById('streak-' + sym);
-  if (strEl) { 
-    strEl.textContent = s.confirmationStreak; 
-    strEl.style.color = s.confirmationStreak >= 3 ? '#34d399' : s.confirmationStreak >= 1 ? '#fbbf24' : '#f87171';
+  if (rsiEl) {
+    rsiEl.textContent = r.rsi || '—';
   }
 
   drawSparkline(sym, r.spark, r.B);
 
+  /* 6-tick grid */
   r.ticks.forEach(tk => {
     const el = document.getElementById('td-' + sym + '-' + tk.t);
-    if (!el) return;
-    const col = tk.tier === 'safe' ? '#34d399' : tk.tier === 'risky' ? '#fbbf24' : '#f87171';
-    el.style.background  = tk.tier === 'safe' ? 'rgba(52,211,153,0.15)' : tk.tier === 'risky' ? 'rgba(251,191,36,0.15)' : 'rgba(248,113,113,0.15)';
-    el.style.color       = col; el.style.borderColor = col + '55';
-    el.textContent       = tk.pct + '%';
+    if (el) {
+      const col = tk.tier === 'safe' ? '#34d399' : tk.tier === 'risky' ? '#fbbf24' : '#f87171';
+      el.style.background = tk.tier === 'safe' ? 'rgba(52,211,153,0.15)' : tk.tier === 'risky' ? 'rgba(251,191,36,0.15)' : 'rgba(248,113,113,0.15)';
+      el.style.color = col;
+      el.textContent = tk.pct + '%';
+    }
   });
 
+  /* Stats */
   const dp = s.dp || 3;
   const sigE = document.getElementById('stat-sigma-' + sym);
   const spkE = document.getElementById('stat-spike-' + sym);
   const drfE = document.getElementById('stat-drift-' + sym);
   if (sigE) sigE.textContent = r.sigma.toFixed(dp + 1);
-  if (spkE) { spkE.textContent = r.worstSpike.toFixed(dp + 1); spkE.style.color = r.worstSpike > r.B * 0.5 ? '#f87171' : r.worstSpike > r.B * 0.25 ? '#fbbf24' : '#34d399'; }
-  if (drfE) { drfE.textContent = r.absMu.toFixed(dp + 1); drfE.style.color = r.absMu > r.B * 0.08 ? '#f87171' : '#34d399'; }
+  if (spkE) spkE.textContent = r.worstSpike.toFixed(dp + 1);
+  if (drfE) drfE.textContent = r.absMu.toFixed(dp + 1);
 
-  /* Trade button — now uses new 100-point scale */
+  /* Button */
   const btn = document.getElementById('tbtn-' + sym);
   if (btn) {
-    btn.disabled = false; btn.style.cursor = 'pointer';
     if (r.survScore >= 100) {
       btn.style.background = 'linear-gradient(135deg,#065f46,#059669)';
-      btn.style.color = '#fff'; btn.style.borderColor = '#059669';
-      btn.textContent = '🚀 ENTER ACCUMULATOR';
+      btn.textContent = hlAutoMode ? 'AUTO TRADING...' : '🚀 ENTER ACCUMULATOR';
     } else if (r.survScore >= 80) {
       btn.style.background = 'linear-gradient(135deg,#78350f,#d97706)';
-      btn.style.color = '#fff'; btn.style.borderColor = '#d97706';
       btn.textContent = '🚀 TRADE ' + sym;
     } else {
       btn.style.background = 'linear-gradient(135deg,#7f1d1d,#dc2626)';
-      btn.style.color = '#fff'; btn.style.borderColor = '#dc2626';
       btn.textContent = '🚀 TRADE ' + sym;
     }
   }
@@ -246,7 +262,19 @@ function updateHLCard(sym) {
 
 window.hlRefreshCard = sym => updateHLCard(sym);
 
-/* ── WebSocket status & connection (unchanged) ── */
+/* ── Toggle AUTO mode ── */
+window.toggleHLMode = function() {
+  hlAutoMode = !hlAutoMode;
+  const btn = document.getElementById('hl-mode-btn');
+  if (btn) {
+    btn.textContent = hlAutoMode ? "AUTO MODE ON" : "MANUAL MODE";
+    btn.style.background = hlAutoMode ? "#10b981" : "var(--bg-elevated)";
+    btn.style.color = hlAutoMode ? "#fff" : "var(--accent)";
+  }
+  accToast(hlAutoMode ? "🚀 AUTO TRADING ENABLED" : "Manual mode active", hlAutoMode ? "success" : "info");
+};
+
+/* ── WebSocket (unchanged) ── */
 function setHLWsStatus(ok) {
   const dot = document.getElementById('hl-ws-dot');
   const lbl = document.getElementById('hl-ws-label');
@@ -255,7 +283,7 @@ function setHLWsStatus(ok) {
 }
 
 function connectHLWs() {
-  if (hlWs) { hlWs.onclose = null; hlWs.onerror = null; try { hlWs.close(); } catch (e) {} hlWs = null; }
+  if (hlWs) hlWs.close();
   hlWs = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');
 
   hlWs.onopen = () => {
@@ -287,13 +315,12 @@ function connectHLWs() {
   };
 
   hlWs.onclose = () => { setHLWsStatus(false); setTimeout(connectHLWs, 3000); };
-  hlWs.onerror = () => { try { hlWs.close(); } catch (e) {} };
 }
 
-/* ── Trade button handler (unchanged) ── */
+/* ── Trade handler (unchanged) ── */
 function startHLTrade(sym) {
   if (!acc.connected) {
-    accToast('❌ Connect Accumulator Bot first (API token required)', 'error');
+    accToast('❌ Connect Accumulator Bot first', 'error');
     showTab('accum-bot');
     return;
   }
@@ -316,12 +343,7 @@ function initializeGenerator() {
 
   VOLS.forEach(v => {
     container.innerHTML += buildHLCard(v);
-    hlStore[v.sym] = { 
-      prices: [], 
-      barrier: v.B, 
-      dp: v.dp,
-      confirmationStreak: 0   // ← new
-    };
+    hlStore[v.sym] = { prices: [], barrier: v.B, dp: v.dp, confirmationStreak: 0 };
   });
 
   connectHLWs();
