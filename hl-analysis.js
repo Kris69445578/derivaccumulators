@@ -28,18 +28,18 @@ let hlAutoMode = false;
 /* ===== RULE CONSTANTS (from Python) ===== */
 const EMA_FAST_PERIOD = 20;
 const EMA_SLOW_PERIOD = 50;
-const EMA_MIN_SEPARATION = 0.0015;
+const EMA_MIN_SEPARATION = 0.0008;
 const VOLATILITY_LOOKBACK = 50;
-const VOLATILITY_HIGH_MULT = 1.1;
+const VOLATILITY_HIGH_MULT = 1.4;
 const SPIKE_LOOKBACK = 15;
-const SPIKE_FACTOR = 1.1;
+const SPIKE_FACTOR = 1.4;
 const EMA_PULLBACK_PERIOD = 20;
-const EMA_PULLBACK_TOLERANCE = 0.0002;
+const EMA_PULLBACK_TOLERANCE = 0.0004;
 const RSI_PERIOD = 14;
 const RSI_LOW = 40;
 const RSI_HIGH = 60;
-const MIN_CONFLUENCES = 4; // ALL 5 rules must pass
-const SIGNAL_CONFIRMATIONS = 5; // Ticks in a row that must pass
+const MIN_CONFLUENCES = 5; // ALL 5 rules must pass
+const SIGNAL_CONFIRMATIONS = 1; // Ticks in a row that must pass
 
 /* ===== HELPER FUNCTIONS (from Python) ===== */
 function computeEMA(prices, period) {
