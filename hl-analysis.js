@@ -36,9 +36,9 @@ const SPIKE_FACTOR = 1.1;
 const EMA_PULLBACK_PERIOD = 20;
 const EMA_PULLBACK_TOLERANCE = 0.0002;
 const RSI_PERIOD = 7;
-const RSI_LOW = 45;
-const RSI_HIGH = 55;
-const MIN_CONFLUENCES = 3; // ALL 5 rules must pass
+const RSI_LOW = 40;
+const RSI_HIGH = 60;
+const MIN_CONFLUENCES = 4; // ALL 5 rules must pass
 const SIGNAL_CONFIRMATIONS = 5; // Ticks in a row that must pass
 
 /* ===== HELPER FUNCTIONS (from Python) ===== */
