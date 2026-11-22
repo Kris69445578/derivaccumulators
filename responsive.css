@@ -1,0 +1,27 @@
+/* =============================================
+   responsive.css — Media query breakpoints
+   (template-tab breakpoints live in templates.css)
+   ============================================= */
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 0.75rem;
+    height: auto;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .navbar-left     { flex-wrap: wrap; }
+  .menu            { gap: 1px; }
+  .menu li a       { padding: 0.3rem 0.5rem; font-size: 0.75rem; }
+  .navbar-brand    { font-size: 1.1rem; }
+
+  .menu-actions-grid { grid-template-columns: 1fr; }
+  .menu-info-grid    { grid-template-columns: 1fr 1fr; }
+  .tips-grid         { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .tab-content      { padding: 1rem 0.75rem; }
+  .menu-info-grid   { grid-template-columns: 1fr; }
+}
