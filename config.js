@@ -10,7 +10,7 @@
  */
 window.JAHIM_CONFIG = {
   APP_ID: '350K1vjYSPxXbn8jLnfYN',
-  REDIRECT_URI: 'https://jahim.dpdns.org/callback',
+  REDIRECT_URI: 'https://jahim.dpdns.org',
 
   /* Must be a subset of the scopes ticked on your app: Trade + Account management */
   SCOPES: 'trade account_manage',
